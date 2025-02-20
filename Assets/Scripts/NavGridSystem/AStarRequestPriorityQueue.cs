@@ -1,7 +1,5 @@
-using System;
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Entities;
 using Unity.Jobs;
 using UnityEngine;
 using Utilities;
@@ -69,7 +67,7 @@ namespace NavGridSystem
 
             var visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.TempJob);
             var closedList = new NativeHashSet<int>(64, Allocator.TempJob);
-            var priorityQueue = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.TempJob);
+            var priorityQueue = new NativePriorityQueue<PathCellData>(128, Allocator.TempJob);
 
             new AStarJob
             {
@@ -88,7 +86,7 @@ namespace NavGridSystem
             priorityQueue.Dispose();
         }
 
-        [BurstCompile]
+        [BurstCompile(Debug = true)]
         private struct AStarJob : IJob
         {
             [ReadOnly] public NativeArray<Cell> grid;

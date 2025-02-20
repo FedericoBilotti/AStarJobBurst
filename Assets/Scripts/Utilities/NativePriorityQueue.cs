@@ -23,7 +23,7 @@ namespace Utilities
         internal int m_MinIndex;
         internal int m_MaxIndex;
         internal AtomicSafetyHandle m_Safety;
-        internal static readonly SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativePriorityQueue<T>>();
+        internal static SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativePriorityQueue<T>>();
 #endif
 
         internal Allocator m_AllocatorLabel;
@@ -47,7 +47,7 @@ namespace Utilities
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             m_MinIndex = 0;
-            m_MaxIndex = length - 1;
+            m_MaxIndex = length;
             m_Safety = CollectionHelper.CreateSafetyHandle(allocator);
             CollectionHelper.SetStaticSafetyId<NativePriorityQueue<T>>(ref m_Safety, ref s_staticSafetyId.Data);
 #endif
@@ -91,6 +91,9 @@ namespace Utilities
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
 
+            if (m_Length >= m_MaxIndex)
+                Resize();
+            
             item.HeapIndex = m_Length;
             UnsafeUtility.WriteArrayElement(m_Buffer, m_Length, item);
             SortUp(m_Length);
@@ -163,9 +166,9 @@ namespace Utilities
 
         private void Swap(int indexA, int indexB)
         {            
-            var xElement = UnsafeUtility.ReadArrayElement<T>(m_Buffer, indexA);
+            var aIndex = UnsafeUtility.ReadArrayElement<T>(m_Buffer, indexA);
             this[indexA] = this[indexB];
-            this[indexB] = xElement;
+            this[indexB] = aIndex;
         }
 
         public T Peek()
@@ -175,7 +178,7 @@ namespace Utilities
 #endif
 
             if (m_Length <= 0)
-                throw new InvalidOperationException("La cola de prioridad está vacía.");
+                throw new InvalidOperationException("The priority queue is empty.");
 
             return UnsafeUtility.ReadArrayElement<T>(m_Buffer, 0);
         }
@@ -183,6 +186,20 @@ namespace Utilities
         private static int GetParent(int i) => (i - 1) / 2;
         private static int LeftChild(int i) => 2 * i + 1;
         private static int RightChild(int i) => 2 * i + 2;
+
+        private void Resize()
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
+#endif
+            
+            int newCapacity = UnsafeUtility.SizeOf<T>() * m_Length * 2;
+            void* newBuffer = UnsafeUtility.MallocTracked(newCapacity, UnsafeUtility.AlignOf<T>(), m_AllocatorLabel, 1);
+            UnsafeUtility.MemCpy(newBuffer, m_Buffer, UnsafeUtility.SizeOf<T>() * Length);
+
+            m_Buffer = newBuffer;
+            m_MaxIndex = newCapacity;
+        }
 
         public bool Contains(T item)
         {
@@ -216,7 +233,8 @@ namespace Utilities
 #endif
 
             AllocatorManager.Free(m_AllocatorLabel, m_Buffer);
-            m_Buffer = null;
+            
+            m_Buffer = (void*)IntPtr.Zero;
             m_Length = 0;
         }
 

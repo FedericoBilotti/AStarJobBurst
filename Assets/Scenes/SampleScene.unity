@@ -851,7 +851,6 @@ GameObject:
   - component: {fileID: 781907328}
   - component: {fileID: 781907329}
   - component: {fileID: 781907331}
-  - component: {fileID: 781907330}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -895,22 +894,6 @@ MonoBehaviour:
   _notWalkableMask:
     serializedVersion: 2
     m_Bits: 64
---- !u!114 &781907330
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 781907326}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d6f5ec96c1258544f8414107d14042ce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _showPath: 0
-  _requestPath: 0
-  _start: {fileID: 1002921022}
-  _end: {fileID: 335039669}
 --- !u!114 &781907331
 MonoBehaviour:
   m_ObjectHideFlags: 0
