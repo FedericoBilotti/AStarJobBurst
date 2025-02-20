@@ -67,7 +67,7 @@ namespace NavGridSystem
 
             var visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.TempJob);
             var closedList = new NativeHashSet<int>(64, Allocator.TempJob);
-            var priorityQueue = new NativePriorityQueue<PathCellData>(128, Allocator.TempJob);
+            var priorityQueue = new NativePriorityQueue<PathCellData>(20, Allocator.TempJob);
 
             new AStarJob
             {
@@ -99,6 +99,7 @@ namespace NavGridSystem
 
             public int startIndex;
             public int endIndex;
+            
             public void Execute()
             {
                 var startData = new PathCellData { cellIndex = startIndex, gCost = 0, hCost = GetDistance(startIndex, endIndex), cameFrom = -1, HeapIndex = int.MaxValue };

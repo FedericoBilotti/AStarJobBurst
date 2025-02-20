@@ -206,6 +206,8 @@ namespace Utilities
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
+            if (item.HeapIndex < 0 || item.HeapIndex > m_Length - 1) return false;
+            
             for (int i = 0; i < m_Length; i++)
             {
                 if (this[i].HeapIndex == item.HeapIndex) 
