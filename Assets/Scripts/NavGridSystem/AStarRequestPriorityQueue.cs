@@ -16,6 +16,7 @@ namespace NavGridSystem
         private IGridSystem _gridSystem;
 
         private NativeList<int> _finalPath;
+        private NativePriorityQueue<PathCellData> _openList;
 
         #region Unity Methods
 
@@ -24,8 +25,8 @@ namespace NavGridSystem
             _gridSystem = GetComponent<IGridSystem>();
 
             _finalPath = new NativeList<int>(30, Allocator.Persistent);
+            _openList = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.Persistent);
         }
-
 
         private void Update()
         {
@@ -36,6 +37,7 @@ namespace NavGridSystem
         private void OnDestroy()
         {
             _finalPath.Dispose();
+            _openList.Dispose();
         }
 
         private void OnDrawGizmos()
@@ -64,26 +66,27 @@ namespace NavGridSystem
             if (!startCell.isWalkable || !endCell.isWalkable) return;
 
             _finalPath.Clear();
-
+            _openList.Clear();
+            
             var visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.TempJob);
             var closedList = new NativeHashSet<int>(64, Allocator.TempJob);
-            var priorityQueue = new NativePriorityQueue<PathCellData>(20, Allocator.TempJob);
 
-            new AStarJob
+            JobHandle jobHandle = new AStarJob
             {
                 grid = _gridSystem.GetGrid(),
                 finalPath = _finalPath,
                 closedList = closedList,
-                openList = priorityQueue,
+                openList = _openList,
                 visitedNodes = visitedNodes,
                 gridSizeX = _gridSystem.GetGridSizeX(),
                 startIndex = startCell.gridIndex,
                 endIndex = endCell.gridIndex
-            }.Schedule().Complete();
+            }.Schedule();
+            
+            jobHandle.Complete();
             
             visitedNodes.Dispose();
             closedList.Dispose();
-            priorityQueue.Dispose();
         }
 
         [BurstCompile(Debug = true)]

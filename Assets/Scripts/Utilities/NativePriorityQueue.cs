@@ -1,19 +1,21 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
 using Debug = UnityEngine.Debug;
 
 namespace Utilities
 {
+    [StructLayout(LayoutKind.Sequential)]
     [NativeContainer]
     [NativeContainerSupportsMinMaxWriteRestriction]
     [NativeContainerSupportsDeallocateOnJobCompletion]
     [DebuggerDisplay("Length = {Length}")]
     [DebuggerTypeProxy(typeof(NativePriorityQueueDebugView<>))]
-    public unsafe struct NativePriorityQueue<T> : IDisposable where T : unmanaged, IHeapComparable<T>
+    public unsafe struct NativePriorityQueue<T> : INativeDisposable where T : unmanaged, IHeapComparable<T>
     {
         [NativeDisableUnsafePtrRestriction] 
         internal void* m_Buffer;
@@ -38,8 +40,8 @@ namespace Utilities
             if (length < 0) throw new ArgumentOutOfRangeException(nameof(length), "Length must be >= 0");
             if (!UnsafeUtility.IsBlittable<T>()) throw new ArgumentException(string.Format("{0} used in NativePriorityQueue<{0}> must be blittable", typeof(T)));
 #endif
-
-            m_Buffer = AllocatorManager.Allocate(allocator, totalSize, UnsafeUtility.AlignOf<T>());
+            
+            m_Buffer = UnsafeUtility.MallocTracked(totalSize, UnsafeUtility.AlignOf<T>(), allocator, 1);
             UnsafeUtility.MemClear(m_Buffer, totalSize);
 
             m_Length = 0;
@@ -192,13 +194,20 @@ namespace Utilities
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
+            // Bug here
             
-            int newCapacity = UnsafeUtility.SizeOf<T>() * m_Length * 2;
-            void* newBuffer = UnsafeUtility.MallocTracked(newCapacity, UnsafeUtility.AlignOf<T>(), m_AllocatorLabel, 1);
+            int newCapacity = m_MaxIndex * 2;
+            void* newBuffer = UnsafeUtility.MallocTracked(UnsafeUtility.SizeOf<T>() * newCapacity, UnsafeUtility.AlignOf<T>(), m_AllocatorLabel, 0);
             UnsafeUtility.MemCpy(newBuffer, m_Buffer, UnsafeUtility.SizeOf<T>() * Length);
-
+            UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
+            
             m_Buffer = newBuffer;
             m_MaxIndex = newCapacity;
+        }
+        
+        public void Clear()
+        {
+            m_Length = 0;
         }
 
         public bool Contains(T item)
@@ -207,6 +216,10 @@ namespace Utilities
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
             if (item.HeapIndex < 0 || item.HeapIndex > m_Length - 1) return false;
+            
+            // O(1) => var heapIndex = item.HeapIndex
+            // O(1) => heapIndex == this[heapIndex].HeapIndex
+            // Compare the heapIndex.
             
             for (int i = 0; i < m_Length; i++)
             {
@@ -228,16 +241,65 @@ namespace Utilities
             return array;
         }
         
+        // Look at NativeArray Dispose Method
+        [WriteAccessRequired]
         public void Dispose()
         {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            CollectionHelper.DisposeSafetyHandle(ref m_Safety);
-#endif
-
-            AllocatorManager.Free(m_AllocatorLabel, m_Buffer);
+            if (m_AllocatorLabel != Allocator.None && !AtomicSafetyHandle.IsDefaultValue(in m_Safety)) 
+                AtomicSafetyHandle.CheckExistsAndThrow(in m_Safety);
             
-            m_Buffer = (void*)IntPtr.Zero;
-            m_Length = 0;
+            if (!IsCreated) 
+                return;
+            
+            if (m_AllocatorLabel == Allocator.Invalid) 
+                throw new InvalidOperationException("The NativeArray can not be Disposed because it was not allocated with a valid allocator.");
+            
+            if (m_AllocatorLabel >= Allocator.FirstUserIndex) 
+                throw new InvalidOperationException("The NativeArray can not be Disposed because it was allocated with a custom allocator, use CollectionHelper.Dispose in com.unity.collections package.");
+            
+            if (m_AllocatorLabel > Allocator.None)
+            {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                CollectionHelper.DisposeSafetyHandle(ref m_Safety);
+#endif
+                UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
+                m_AllocatorLabel = Allocator.Invalid;
+            }
+            
+            m_Buffer = null;
+        }
+
+        // May be i need to implement this Dispose method with (INativeDisposable) -> Search in NativeArray Dispose method that return JobHandle
+        public JobHandle Dispose(JobHandle inputDeps)
+        {
+            if (m_AllocatorLabel != Allocator.None && !AtomicSafetyHandle.IsDefaultValue(in m_Safety))
+                AtomicSafetyHandle.CheckExistsAndThrow(in m_Safety);
+            
+            if (!IsCreated)
+                return inputDeps;
+            
+            if (m_AllocatorLabel >= Allocator.FirstUserIndex)
+                throw new InvalidOperationException("The NativeArray can not be Disposed because it was allocated with a custom allocator, use CollectionHelper.Dispose in com.unity.collections package.");
+            
+            if (m_AllocatorLabel > Allocator.None)
+            {
+                JobHandle jobHandle = new NativePriorityQueueDisposeJob<T>
+                {
+                    Data = new NativePriorityQueueDispose<T>
+                    {
+                        m_Buffer = m_Buffer,
+                        m_AllocatorLabel = m_AllocatorLabel,
+                        m_Safety = m_Safety
+                    }
+                }.Schedule(inputDeps);
+                
+                AtomicSafetyHandle.Release(m_Safety);
+                m_Buffer = null;
+                m_AllocatorLabel = Allocator.Invalid;
+                return jobHandle;
+            }
+            m_Buffer = null;
+            return inputDeps;
         }
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
