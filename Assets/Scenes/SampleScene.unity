@@ -637,7 +637,7 @@ GameObject:
   - component: {fileID: 497049415}
   - component: {fileID: 497049414}
   m_Layer: 6
-  m_Name: Obstacle (8)
+  m_Name: Obstacle (7)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -885,10 +885,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70a5903f720d44c49f83f673a252a503, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _showGizmos: 1
+  _showGizmos: 0
   _showGrid: 1
   _showLines: 0
-  _gridSize: {x: 50, y: 50}
+  _gridSize: {x: 500, y: 500}
   _cellSize: 0.5
   _maxDistance: 3
   _notWalkableMask:
@@ -1539,7 +1539,8 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 781907328}
   - {fileID: 1358035664}
-  - {fileID: 75087657}
+  - {fileID: 1002921022}
+  - {fileID: 335039669}
   - {fileID: 1679835555}
   - {fileID: 1553568821}
   - {fileID: 706958318}
@@ -1547,5 +1548,4 @@ SceneRoots:
   - {fileID: 1819612972}
   - {fileID: 358474701}
   - {fileID: 497049417}
-  - {fileID: 1002921022}
-  - {fileID: 335039669}
+  - {fileID: 75087657}

@@ -5,6 +5,8 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using Unity.Mathematics;
+using UnityEditor.Experimental.GraphView;
 using Debug = UnityEngine.Debug;
 
 namespace Utilities
@@ -92,9 +94,21 @@ namespace Utilities
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
+            
+            if (Length >= m_MaxIndex)
+            {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
+#endif
+                int newCapacity = m_MaxIndex * 2;
+                void* newBuffer = UnsafeUtility.MallocTracked(UnsafeUtility.SizeOf<T>() * newCapacity, UnsafeUtility.AlignOf<T>(), m_AllocatorLabel, 1);
+                
+                UnsafeUtility.MemCpy(newBuffer, m_Buffer, UnsafeUtility.SizeOf<T>() * Length);
+                UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
 
-            if (m_Length >= m_MaxIndex)
-                Resize();
+                m_Buffer = newBuffer;
+                m_MaxIndex = newCapacity;
+            }
             
             item.HeapIndex = m_Length;
             UnsafeUtility.WriteArrayElement(m_Buffer, m_Length, item);
@@ -188,22 +202,6 @@ namespace Utilities
         private static int GetParent(int i) => (i - 1) / 2;
         private static int LeftChild(int i) => 2 * i + 1;
         private static int RightChild(int i) => 2 * i + 2;
-
-        private void Resize()
-        {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
-#endif
-            // Bug here
-            
-            int newCapacity = m_MaxIndex * 2;
-            void* newBuffer = UnsafeUtility.MallocTracked(UnsafeUtility.SizeOf<T>() * newCapacity, UnsafeUtility.AlignOf<T>(), m_AllocatorLabel, 0);
-            UnsafeUtility.MemCpy(newBuffer, m_Buffer, UnsafeUtility.SizeOf<T>() * Length);
-            UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
-            
-            m_Buffer = newBuffer;
-            m_MaxIndex = newCapacity;
-        }
         
         public void Clear() => m_Length = 0;
 
@@ -235,7 +233,6 @@ namespace Utilities
             return array;
         }
         
-        // Look at NativeArray Dispose Method
         [WriteAccessRequired]
         public void Dispose()
         {
@@ -263,7 +260,6 @@ namespace Utilities
             m_Buffer = null;
         }
 
-        // May be i need to implement this Dispose method with (INativeDisposable) -> Search in NativeArray Dispose method that return JobHandle
         public JobHandle Dispose(JobHandle inputDeps)
         {
             if (m_AllocatorLabel != Allocator.None && !AtomicSafetyHandle.IsDefaultValue(in m_Safety))
@@ -306,7 +302,6 @@ namespace Utilities
 
             throw new IndexOutOfRangeException(string.Format("HeapIndex {0} is out of range of '{1}' Length.", index, Length));
         }
-
 #endif
     }
 

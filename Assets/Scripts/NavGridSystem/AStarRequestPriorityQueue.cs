@@ -17,6 +17,8 @@ namespace NavGridSystem
 
         private NativeList<int> _finalPath;
         private NativePriorityQueue<PathCellData> _openList;
+        private NativeHashMap<int, PathCellData> _visitedNodes;
+        private NativeHashSet<int> _closedList;
 
         #region Unity Methods
 
@@ -26,18 +28,16 @@ namespace NavGridSystem
 
             _finalPath = new NativeList<int>(30, Allocator.Persistent);
             _openList = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.Persistent);
-        }
-
-        private void Update()
-        {
-            if (!_requestPath) return;
-            RequestPath(_start.position, _end.position);
+            _visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent);
+            _closedList = new NativeHashSet<int>(64, Allocator.Persistent);
         }
 
         private void OnDestroy()
         {
             _finalPath.Dispose();
             _openList.Dispose();
+            _visitedNodes.Dispose();
+            _closedList.Dispose();
         }
 
         private void OnDrawGizmos()
@@ -67,29 +67,25 @@ namespace NavGridSystem
 
             _finalPath.Clear();
             _openList.Clear();
-            
-            var visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.TempJob);
-            var closedList = new NativeHashSet<int>(64, Allocator.TempJob);
+            _visitedNodes.Clear();
+            _closedList.Clear();
 
             JobHandle jobHandle = new AStarJob
             {
                 grid = _gridSystem.GetGrid(),
                 finalPath = _finalPath,
-                closedList = closedList,
+                closedList = _closedList,
                 openList = _openList,
-                visitedNodes = visitedNodes,
+                visitedNodes = _visitedNodes,
                 gridSizeX = _gridSystem.GetGridSizeX(),
                 startIndex = startCell.gridIndex,
                 endIndex = endCell.gridIndex
             }.Schedule();
             
             jobHandle.Complete();
-            
-            visitedNodes.Dispose();
-            closedList.Dispose();
         }
 
-        [BurstCompile(Debug = true)]
+        [BurstCompile]
         private struct AStarJob : IJob
         {
             [ReadOnly] public NativeArray<Cell> grid;
