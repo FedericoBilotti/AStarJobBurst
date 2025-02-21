@@ -205,11 +205,13 @@ namespace Utilities
             m_MaxIndex = newCapacity;
         }
         
-        public void Clear()
-        {
-            m_Length = 0;
-        }
+        public void Clear() => m_Length = 0;
 
+        /// <summary>
+        /// Check if the item is in the priority queue. O(1)
+        /// </summary>
+        /// <param name="item">The item to check</param>
+        /// <returns></returns>
         public bool Contains(T item)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -217,17 +219,9 @@ namespace Utilities
 #endif
             if (item.HeapIndex < 0 || item.HeapIndex > m_Length - 1) return false;
             
-            // O(1) => var heapIndex = item.HeapIndex
-            // O(1) => heapIndex == this[heapIndex].HeapIndex
-            // Compare the heapIndex.
-            
-            for (int i = 0; i < m_Length; i++)
-            {
-                if (this[i].HeapIndex == item.HeapIndex) 
-                    return true;
-            }
-            
-            return false;
+            // If the item of the HeapIndex is equal to the current item, return true. Otherwise, return false.
+            int heapIndex = item.HeapIndex;
+            return heapIndex == this[heapIndex].HeapIndex;
         }
 
         public T[] ToArray()
