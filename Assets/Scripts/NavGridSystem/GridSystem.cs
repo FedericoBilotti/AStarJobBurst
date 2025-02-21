@@ -1,10 +1,11 @@
 using Unity.Collections;
 using UnityEngine;
+using Utilities;
 using Vector3 = UnityEngine.Vector3;
 
 namespace NavGridSystem
 {
-    public class GridSystem : MonoBehaviour, IGridSystem
+    public class GridSystem : Singleton<GridSystem>, IGridSystem
     {
         [SerializeField] private bool _showGizmos;
         [SerializeField] private bool _showGrid;

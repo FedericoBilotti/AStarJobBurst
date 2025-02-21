@@ -888,7 +888,7 @@ MonoBehaviour:
   _showGizmos: 0
   _showGrid: 1
   _showLines: 0
-  _gridSize: {x: 500, y: 500}
+  _gridSize: {x: 50, y: 50}
   _cellSize: 0.5
   _maxDistance: 3
   _notWalkableMask:

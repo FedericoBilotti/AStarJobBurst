@@ -1,10 +1,10 @@
-using Unity.Jobs;
+using Unity.Collections;
 using UnityEngine;
 
 namespace NavGridSystem
 {
     public interface INavigation
     {
-        void RequestPath(Vector3 start, Vector3 end);
+        bool RequestPath(ref NativeList<int> path, Vector3 start, Vector3 end);
     }
 }

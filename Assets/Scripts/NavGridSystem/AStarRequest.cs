@@ -6,16 +6,14 @@ using Utilities;
 
 namespace NavGridSystem
 {
-    public class AStarRequestPriorityQueue : MonoBehaviour, INavigation
+    public class AStarRequest : Singleton<AStarRequest>, INavigation
     {
-        [SerializeField] private bool _showPath;
-        [SerializeField] private bool _requestPath;
         [SerializeField] private Transform _start;
         [SerializeField] private Transform _end;
 
+        // Create a service locator for the grid system and the navigation -> suscribe the interfaces of both.
         private IGridSystem _gridSystem;
 
-        private NativeList<int> _finalPath;
         private NativePriorityQueue<PathCellData> _openList;
         private NativeHashMap<int, PathCellData> _visitedNodes;
         private NativeHashSet<int> _closedList;
@@ -26,46 +24,27 @@ namespace NavGridSystem
         {
             _gridSystem = GetComponent<IGridSystem>();
 
-            _finalPath = new NativeList<int>(30, Allocator.Persistent);
             _openList = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.Persistent);
-            _visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent);
+            _visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent); ;
             _closedList = new NativeHashSet<int>(64, Allocator.Persistent);
         }
 
         private void OnDestroy()
         {
-            _finalPath.Dispose();
             _openList.Dispose();
             _visitedNodes.Dispose();
             _closedList.Dispose();
         }
 
-        private void OnDrawGizmos()
-        {
-            if (!_showPath) return;
-            if (!_finalPath.IsCreated || _finalPath.Length == 0) return;
-
-            Gizmos.color = Color.red;
-            NativeArray<Cell> grid = _gridSystem.GetGrid();
-
-            for (int i = 0; i < _finalPath.Length - 1; i++)
-            {
-                Vector3 startPos = grid[_finalPath[i]].position;
-                Vector3 endPos = grid[_finalPath[i + 1]].position;
-                Gizmos.DrawLine(startPos, endPos);
-            }
-        }
-
         #endregion
 
-        public void RequestPath(Vector3 start, Vector3 end)
+        public bool RequestPath(ref NativeList<int> path, Vector3 start, Vector3 end)
         {
             Cell startCell = _gridSystem.GetCellWithWorldPosition(start);
             Cell endCell = _gridSystem.GetCellWithWorldPosition(end);
 
-            if (!startCell.isWalkable || !endCell.isWalkable) return;
+            if (!startCell.isWalkable || !endCell.isWalkable) return false;
 
-            _finalPath.Clear();
             _openList.Clear();
             _visitedNodes.Clear();
             _closedList.Clear();
@@ -73,7 +52,7 @@ namespace NavGridSystem
             JobHandle jobHandle = new AStarJob
             {
                 grid = _gridSystem.GetGrid(),
-                finalPath = _finalPath,
+                finalPath = path,
                 closedList = _closedList,
                 openList = _openList,
                 visitedNodes = _visitedNodes,
@@ -83,6 +62,8 @@ namespace NavGridSystem
             }.Schedule();
             
             jobHandle.Complete();
+
+            return true;
         }
 
         [BurstCompile]
