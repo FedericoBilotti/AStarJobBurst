@@ -1,11 +1,12 @@
 using System;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace NavGridSystem
 {
     public struct Cell : IEquatable<Cell>
     {
-        public float3 position;
+        public Vector3 position;
 
         public int gridIndex;
         public int x;

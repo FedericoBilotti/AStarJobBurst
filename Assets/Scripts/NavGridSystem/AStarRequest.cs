@@ -11,7 +11,7 @@ namespace NavGridSystem
         [SerializeField] private Transform _start;
         [SerializeField] private Transform _end;
 
-        // Create a service locator for the grid system and the navigation -> suscribe the interfaces of both.
+        // Create a service locator for the grid system and the navigation -> subscribe the interfaces of both.
         private IGridSystem _gridSystem;
 
         private NativePriorityQueue<PathCellData> _openList;
@@ -38,7 +38,7 @@ namespace NavGridSystem
 
         #endregion
 
-        public bool RequestPath(ref NativeList<int> path, Vector3 start, Vector3 end)
+        public bool RequestPath(ref NativeList<Cell> path, Vector3 start, Vector3 end)
         {
             Cell startCell = _gridSystem.GetCellWithWorldPosition(start);
             Cell endCell = _gridSystem.GetCellWithWorldPosition(end);
@@ -70,7 +70,7 @@ namespace NavGridSystem
         private struct AStarJob : IJob
         {
             [ReadOnly] public NativeArray<Cell> grid;
-            public NativeList<int> finalPath;
+            public NativeList<Cell> finalPath;
             public NativeHashSet<int> closedList;
             public NativePriorityQueue<PathCellData> openList;
             public NativeHashMap<int, PathCellData> visitedNodes;
@@ -159,9 +159,10 @@ namespace NavGridSystem
             private void ReversePath(int end)
             {
                 int currentIndex = end;
+
                 while (currentIndex != -1)
                 {
-                    finalPath.Add(currentIndex);
+                    finalPath.Add(grid[currentIndex]);
                     currentIndex = visitedNodes[currentIndex].cameFrom;
                 }
 

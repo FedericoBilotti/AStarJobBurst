@@ -10,8 +10,8 @@ namespace NavGridSystem
         [SerializeField] private bool _showGizmos;
         [SerializeField] private bool _showGrid;
         [SerializeField] private bool _showLines;
-        [SerializeField] private Vector2Int _gridSize;
         [SerializeField] private float _cellSize;
+        [SerializeField] private Vector2Int _gridSize;
 
         [Header("Check Wall")] 
         [SerializeField] private float _maxDistance = 100;
@@ -51,7 +51,7 @@ namespace NavGridSystem
                 
                 Vector3 cellPosition = transform.position + Vector3.right * (x * _cellDiameter + _cellSize) + Vector3.forward * (y * _cellDiameter + _cellSize);
 
-                bool isWalkable = !Physics.Raycast(cellPosition + Vector3.up * _maxDistance, Vector3.down, out RaycastHit raycastHit, _maxDistance, _notWalkableMask);
+                bool isWalkable = !Physics.SphereCast(cellPosition + Vector3.up * _maxDistance, _cellSize, Vector3.down, out RaycastHit raycastHit, _maxDistance, _notWalkableMask);
                 
                 _grid[i] = new Cell
                 {
