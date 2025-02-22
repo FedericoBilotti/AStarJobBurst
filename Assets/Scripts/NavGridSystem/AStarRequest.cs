@@ -45,6 +45,7 @@ namespace NavGridSystem
 
             if (!startCell.isWalkable || !endCell.isWalkable) return false;
 
+            path.Clear();
             _openList.Clear();
             _visitedNodes.Clear();
             _closedList.Clear();

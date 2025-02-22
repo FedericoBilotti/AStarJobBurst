@@ -45,7 +45,11 @@ namespace NavGridSystem
         private void Update()
         {
             if (!_path.IsCreated) return;
-            if (_path.Length == 0) return;
+            if (_path.Length == 0)
+            {
+                Debug.Log("Path is empty");
+                return;
+            }
 
             Vector3 distance = _path[_currentWaypoint % _path.Length].position - _transform.position;
             CheckWaypoints(distance);
@@ -74,17 +78,20 @@ namespace NavGridSystem
             if (_endPosition == end) return;
             
             _endPosition = end;
-            _path.Clear();
             _hasPath = AStarRequest.Instance.RequestPath(ref _path, start, end);
         }
 
         private void PathMovement(Vector3 distance)
         {
             Move(distance);
-            Rotate(distance);
+            // Rotate(distance);
         }
 
-        private void Move(Vector3 distance) => _transform.position += distance.normalized * (_speed * Time.deltaTime);
+        private void Move(Vector3 distance)
+        {
+            transform.forward = distance.normalized;
+            _transform.position += transform.forward * (_speed * Time.deltaTime);
+        }
 
         private void Rotate(Vector3 distance)
         {
