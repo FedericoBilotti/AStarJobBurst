@@ -24,6 +24,8 @@ namespace NavGridSystem
         public NativeArray<Cell> GetGrid() => _grid;
         public int GetGridSize() => _gridSize.x * _gridSize.y;
         public int GetGridSizeX() => _gridSize.x;
+        
+        public Cell GetRandomCell() => _grid[Random.Range(0, _grid.Length)];
 
         public Cell GetCellWithWorldPosition(Vector3 worldPosition)
         {
@@ -55,7 +57,7 @@ namespace NavGridSystem
                 
                 _grid[i] = new Cell
                 {
-                    position = !isWalkable ? raycastHit.point : cellPosition,
+                    position = cellPosition,
                     gridIndex = i,
                     x = x,
                     y = y,

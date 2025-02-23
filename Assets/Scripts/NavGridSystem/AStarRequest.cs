@@ -8,9 +8,6 @@ namespace NavGridSystem
 {
     public class AStarRequest : Singleton<AStarRequest>, INavigation
     {
-        [SerializeField] private Transform _start;
-        [SerializeField] private Transform _end;
-
         // Create a service locator for the grid system and the navigation -> subscribe the interfaces of both.
         private IGridSystem _gridSystem;
 
@@ -38,14 +35,11 @@ namespace NavGridSystem
 
         #endregion
 
-        public bool RequestPath(ref NativeList<Cell> path, Vector3 start, Vector3 end)
+        public void RequestPath(ref NativeList<Cell> path, Vector3 start, Vector3 end)
         {
             Cell startCell = _gridSystem.GetCellWithWorldPosition(start);
             Cell endCell = _gridSystem.GetCellWithWorldPosition(end);
-
-            if (!startCell.isWalkable || !endCell.isWalkable) return false;
-
-            path.Clear();
+            
             _openList.Clear();
             _visitedNodes.Clear();
             _closedList.Clear();
@@ -63,14 +57,34 @@ namespace NavGridSystem
             }.Schedule();
             
             jobHandle.Complete();
+        }
+        
+        public void RequestPath(ref NativeList<Cell> path, Cell start, Cell end)
+        {
+            _openList.Clear();
+            _visitedNodes.Clear();
+            _closedList.Clear();
 
-            return true;
+            JobHandle jobHandle = new AStarJob
+            {
+                grid = _gridSystem.GetGrid(),
+                finalPath = path,
+                closedList = _closedList,
+                openList = _openList,
+                visitedNodes = _visitedNodes,
+                gridSizeX = _gridSystem.GetGridSizeX(),
+                startIndex = start.gridIndex,
+                endIndex = end.gridIndex
+            }.Schedule();
+            
+            jobHandle.Complete();
         }
 
         [BurstCompile]
         private struct AStarJob : IJob
         {
             [ReadOnly] public NativeArray<Cell> grid;
+            
             public NativeList<Cell> finalPath;
             public NativeHashSet<int> closedList;
             public NativePriorityQueue<PathCellData> openList;

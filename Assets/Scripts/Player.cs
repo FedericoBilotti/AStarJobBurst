@@ -1,4 +1,3 @@
-using System;
 using NavGridSystem;
 using UnityEngine;
 
@@ -9,10 +8,19 @@ public class Player : MonoBehaviour
     
     private AgentNavigation _agentNavigation;
 
-    private void Awake() => _agentNavigation = GetComponent<AgentNavigation>();
+    private void Awake()
+    {
+        _agentNavigation = GetComponent<AgentNavigation>();
+        _agentNavigation.Speed = Random.Range(1f, 10f);
+        _agentNavigation.RotationSpeed = Random.Range(1f, 10f);
+    }
 
     private void Update()
     {
-        _agentNavigation.RequestPath(transform.position, _endPosition.position);
+        if (_agentNavigation.HasPath) return;
+        
+        Cell myCell = GridSystem.Instance.GetCellWithWorldPosition(transform.position);
+        Cell randomCell = GridSystem.Instance.GetRandomCell();
+        _agentNavigation.RequestPath(myCell, randomCell);
     }
 }

@@ -5,6 +5,7 @@ namespace NavGridSystem
 {
     public interface INavigation
     {
-        bool RequestPath(ref NativeList<Cell> path, Vector3 start, Vector3 end);
+        void RequestPath(ref NativeList<Cell> path, Vector3 start, Vector3 end);
+        void RequestPath(ref NativeList<Cell> path, Cell start, Cell end);
     }
 }
