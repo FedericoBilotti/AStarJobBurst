@@ -1,11 +1,12 @@
+using System;
 using Unity.Collections;
 using UnityEngine;
-using Utilities;
+using Random = UnityEngine.Random;
 using Vector3 = UnityEngine.Vector3;
 
 namespace NavGridSystem
 {
-    public class GridSystem : Singleton<GridSystem>, IGridSystem
+    public class GridSystem : MonoBehaviour, IGridSystem
     {
         [SerializeField] private bool _showGizmos;
         [SerializeField] private bool _showGrid;
@@ -24,7 +25,7 @@ namespace NavGridSystem
         public NativeArray<Cell> GetGrid() => _grid;
         public int GetGridSize() => _gridSize.x * _gridSize.y;
         public int GetGridSizeX() => _gridSize.x;
-        
+
         public Cell GetRandomCell() => _grid[Random.Range(0, _grid.Length)];
 
         public Cell GetCellWithWorldPosition(Vector3 worldPosition)
@@ -75,6 +76,8 @@ namespace NavGridSystem
             
             CreateGrid();
         }
+
+        private void Start() => ServiceLocator.Instance.RegisterService<IGridSystem>(this);
 
 #if UNITY_EDITOR
 

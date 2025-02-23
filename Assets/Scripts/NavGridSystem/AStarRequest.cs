@@ -6,9 +6,8 @@ using Utilities;
 
 namespace NavGridSystem
 {
-    public class AStarRequest : Singleton<AStarRequest>, INavigation
+    public class AStarRequest : MonoBehaviour, INavigation
     {
-        // Create a service locator for the grid system and the navigation -> subscribe the interfaces of both.
         private IGridSystem _gridSystem;
 
         private NativePriorityQueue<PathCellData> _openList;
@@ -20,9 +19,9 @@ namespace NavGridSystem
         private void Awake()
         {
             _gridSystem = GetComponent<IGridSystem>();
-
+            
             _openList = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.Persistent);
-            _visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent); ;
+            _visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent);
             _closedList = new NativeHashSet<int>(64, Allocator.Persistent);
         }
 
@@ -32,6 +31,8 @@ namespace NavGridSystem
             _visitedNodes.Dispose();
             _closedList.Dispose();
         }
+
+        private void Start() => ServiceLocator.Instance.RegisterService<INavigation>(this);
 
         #endregion
 

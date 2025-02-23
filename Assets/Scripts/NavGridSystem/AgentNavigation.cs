@@ -72,13 +72,13 @@ namespace NavGridSystem
         public void RequestPath(Vector3 start, Vector3 end)
         {
             _waypointsPath.Clear();
-            AStarRequest.Instance.RequestPath(ref _waypointsPath, start, end);
+            ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
         }
         
         public void RequestPath(Cell start, Cell end)
         {
             _waypointsPath.Clear();
-            AStarRequest.Instance.RequestPath(ref _waypointsPath, start, end);
+            ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
         }
 
         private void PathMovement(Vector3 distance)

@@ -1,5 +1,6 @@
 using NavGridSystem;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 [SelectionBase]
 public class Player : MonoBehaviour
@@ -19,8 +20,9 @@ public class Player : MonoBehaviour
     {
         if (_agentNavigation.HasPath) return;
         
-        Cell myCell = GridSystem.Instance.GetCellWithWorldPosition(transform.position);
-        Cell randomCell = GridSystem.Instance.GetRandomCell();
+        var gridSystem = ServiceLocator.Instance.GetService<IGridSystem>();
+        Cell myCell = gridSystem.GetCellWithWorldPosition(transform.position);
+        Cell randomCell = gridSystem.GetRandomCell();
         _agentNavigation.RequestPath(myCell, randomCell);
     }
 }
