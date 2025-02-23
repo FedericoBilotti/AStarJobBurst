@@ -19,9 +19,9 @@ namespace NavGridSystem
         private int _currentWaypoint;
         
         public bool HasPath => _waypointsPath.Length > 0;
-        public float Speed { get => _speed; set => _speed = Mathf.Max(0, value); }
-        public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0, value); }
-        public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0, value); }
+        public float Speed { get => _speed; set => _speed = Mathf.Max(0.01f, value); }
+        public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
+        public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
 
         #region Unity Methods
 
@@ -35,8 +35,8 @@ namespace NavGridSystem
 
         private void OnValidate()
         {
-            _speed = Mathf.Max(0, _speed);
-            _rotationSpeed = Mathf.Max(0, _rotationSpeed);
+            _speed = Mathf.Max(0.01f, _speed);
+            _rotationSpeed = Mathf.Max(0.01f, _rotationSpeed);
             _changeWaypointDistance = Mathf.Max(0.1f, _changeWaypointDistance);
         }
 
