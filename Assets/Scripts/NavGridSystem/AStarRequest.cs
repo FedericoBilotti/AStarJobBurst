@@ -19,7 +19,7 @@ namespace NavGridSystem
         private void Awake()
         {
             _gridSystem = GetComponent<IGridSystem>();
-            
+
             _openList = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.Persistent);
             _visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent);
             _closedList = new NativeHashSet<int>(64, Allocator.Persistent);
@@ -40,28 +40,16 @@ namespace NavGridSystem
         {
             Cell startCell = _gridSystem.GetCellWithWorldPosition(start);
             Cell endCell = _gridSystem.GetCellWithWorldPosition(end);
-            
-            _openList.Clear();
-            _visitedNodes.Clear();
-            _closedList.Clear();
 
-            JobHandle jobHandle = new AStarJob
-            {
-                grid = _gridSystem.GetGrid(),
-                finalPath = path,
-                closedList = _closedList,
-                openList = _openList,
-                visitedNodes = _visitedNodes,
-                gridSizeX = _gridSystem.GetGridSizeX(),
-                startIndex = startCell.gridIndex,
-                endIndex = endCell.gridIndex
-            }.Schedule();
-            
-            jobHandle.Complete();
+            ExecuteJob(ref path, startCell, endCell);
         }
-        
-        public void RequestPath(ref NativeList<Cell> path, Cell start, Cell end)
+
+        public void RequestPath(ref NativeList<Cell> path, Cell start, Cell end) => ExecuteJob(ref path, start, end);
+
+        private void ExecuteJob(ref NativeList<Cell> path, Cell start, Cell end)
         {
+            if (!end.isWalkable) return;
+            
             _openList.Clear();
             _visitedNodes.Clear();
             _closedList.Clear();
@@ -77,7 +65,7 @@ namespace NavGridSystem
                 startIndex = start.gridIndex,
                 endIndex = end.gridIndex
             }.Schedule();
-            
+
             jobHandle.Complete();
         }
 

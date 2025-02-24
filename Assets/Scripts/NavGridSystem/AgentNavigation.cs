@@ -14,7 +14,6 @@ namespace NavGridSystem
 
         private NativeList<Cell> _waypointsPath;
         private Transform _transform;
-        private Vector3 _endPosition;
 
         private int _currentWaypoint;
         
@@ -42,9 +41,7 @@ namespace NavGridSystem
 
         private void Update()
         {
-            if (!_waypointsPath.IsCreated) return;
             if (!HasPath) return;
-
             if (_currentWaypoint >= _waypointsPath.Length) 
                 _currentWaypoint = 0;
             
@@ -71,13 +68,13 @@ namespace NavGridSystem
 
         public void RequestPath(Vector3 start, Vector3 end)
         {
-            _waypointsPath.Clear();
+            ClearPath();
             ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
         }
         
         public void RequestPath(Cell start, Cell end)
         {
-            _waypointsPath.Clear();
+            ClearPath();
             ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
         }
 
@@ -106,13 +103,13 @@ namespace NavGridSystem
             if (_currentWaypoint >= _waypointsPath.Length)
             {
                 ClearPath();
+                _currentWaypoint = 0;
             }
         }
 
         private void ClearPath()
         {
             _waypointsPath.Clear();
-            _currentWaypoint = 0;
         }
     }
 }

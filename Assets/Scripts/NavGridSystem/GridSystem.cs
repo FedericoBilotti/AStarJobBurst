@@ -112,7 +112,7 @@ namespace NavGridSystem
 
                 if (_showGrid)
                 {
-                    Vector3 cellSize = new Vector3(.75f, 0, .75f) * _cellDiameter;
+                    Vector3 cellSize = new Vector3(.5f, 0, .5f) * _cellDiameter;
                     Gizmos.color = _grid[i].isWalkable ? Color.green : Color.red;
                     Gizmos.DrawWireCube(_grid[i].position, cellSize);
                 }
