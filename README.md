@@ -6,7 +6,7 @@ Features:
 - Grid-based navigation
 - Custom Native Priority Queue
 
-Testing with 125 agents - 100x100 GridSize
+125 agents - 100x100 GridSize
 
 #### AStar-Job-RandomPath
 ![Random Path Calculation](https://github.com/user-attachments/assets/26909aba-d073-4d04-bd5f-e397c9a04bb0)
