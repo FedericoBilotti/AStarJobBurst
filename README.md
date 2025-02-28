@@ -1,7 +1,7 @@
 # AStar-Job
 AStar-Job is an optimized implementation of the A* algorithm for Unity, using the JobSystem and Burst Compiler.
 
-[Ver el código en GitHub](https://github.com/FedericoBilotti/AStarJobBurst)
+[View the code](https://github.com/FedericoBilotti/AStarJobBurst)
 
 Features:
 - Parallel path calculation using the JobSystem
