@@ -6,6 +6,7 @@ using Random = UnityEngine.Random;
 public class Player : MonoBehaviour
 {
     private Transform _transform;
+    [SerializeField] private Transform _followTarget;
     
     private AgentNavigation _agentNavigation;
 
@@ -19,12 +20,12 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        if (_agentNavigation.HasPath) return;
-                
+        // if (_agentNavigation.HasPath) return;
+        
         var gridSystem = ServiceLocator.Instance.GetService<IGridSystem>();
         Cell myCell = gridSystem.GetCellWithWorldPosition(_transform.position);
-        Cell randomCell = gridSystem.GetRandomCell();
-        
-        _agentNavigation.RequestPath(myCell, randomCell);
+        Cell target = gridSystem.GetCellWithWorldPosition(_followTarget.position);
+
+        _agentNavigation.RequestPath(myCell, target);
     }
 }

@@ -3,7 +3,12 @@ using UnityEngine;
 
 namespace NavGridSystem
 {
-    public class AgentNavigation : MonoBehaviour
+    public interface IAgent
+    {
+        void SetPath(NativeList<Cell> path);
+    }
+    
+    public class AgentNavigation : MonoBehaviour, IAgent
     {
         [SerializeField] private float _speed = 5;
         [SerializeField] private float _rotationSpeed = 10;
@@ -75,8 +80,11 @@ namespace NavGridSystem
         public void RequestPath(Cell start, Cell end)
         {
             ClearPath();
-            ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
+            // ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
+            ServiceLocator.Instance.GetService<INavigation>().RequestPath(this, start, end);
         }
+
+        public void SetPath(NativeList<Cell> path) => _waypointsPath = path;
 
         private void PathMovement(Vector3 distance)
         {

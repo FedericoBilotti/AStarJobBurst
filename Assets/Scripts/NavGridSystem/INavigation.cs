@@ -7,5 +7,6 @@ namespace NavGridSystem
     {
         void RequestPath(ref NativeList<Cell> path, Vector3 start, Vector3 end);
         void RequestPath(ref NativeList<Cell> path, Cell start, Cell end);
+        void RequestPath(IAgent agent, Cell start, Cell end);
     }
 }
