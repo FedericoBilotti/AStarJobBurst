@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 
@@ -5,7 +6,7 @@ namespace NavGridSystem
 {
     public interface IAgent
     {
-        void SetPath(NativeList<Cell> path);
+        void SetPath(Cell[] path);
     }
     
     public class AgentNavigation : MonoBehaviour, IAgent
@@ -17,12 +18,12 @@ namespace NavGridSystem
         [Header("Debug")] 
         [SerializeField] private bool _showPath;
 
-        private NativeList<Cell> _waypointsPath;
+        private Cell[] _waypointsPath;
         private Transform _transform;
 
         private int _currentWaypoint;
         
-        public bool HasPath => _waypointsPath.Length > 0;
+        public bool HasPath => _waypointsPath is { Length: > 0 };
         public float Speed { get => _speed; set => _speed = Mathf.Max(0.01f, value); }
         public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
         public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
@@ -31,11 +32,10 @@ namespace NavGridSystem
 
         private void Awake()
         {
-            _waypointsPath = new NativeList<Cell>(30, Allocator.Persistent);
             _transform = transform;
         }
 
-        private void OnDestroy() => _waypointsPath.Dispose();
+        // private void OnDestroy() => _waypointsPath.Dispose();
 
         private void OnValidate()
         {
@@ -58,7 +58,7 @@ namespace NavGridSystem
         private void OnDrawGizmos()
         {
             if (!_showPath) return;
-            if (!_waypointsPath.IsCreated || _waypointsPath.Length == 0) return;
+            if (_waypointsPath == null || _waypointsPath.Length == 0) return;
 
             Gizmos.color = Color.black;
             
@@ -74,7 +74,7 @@ namespace NavGridSystem
         public void RequestPath(Vector3 start, Vector3 end)
         {
             ClearPath();
-            ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
+            // ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
         }
         
         public void RequestPath(Cell start, Cell end)
@@ -84,7 +84,7 @@ namespace NavGridSystem
             ServiceLocator.Instance.GetService<INavigation>().RequestPath(this, start, end);
         }
 
-        public void SetPath(NativeList<Cell> path) => _waypointsPath = path;
+        public void SetPath(Cell[] path) => _waypointsPath = path;
 
         private void PathMovement(Vector3 distance)
         {
@@ -117,7 +117,7 @@ namespace NavGridSystem
 
         private void ClearPath()
         {
-            _waypointsPath.Clear();
+            _waypointsPath = null;
         }
     }
 }

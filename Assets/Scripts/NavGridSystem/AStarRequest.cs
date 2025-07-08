@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
@@ -27,28 +28,16 @@ namespace NavGridSystem
             _openList.Dispose();
             _visitedNodes.Dispose();
             _closedList.Dispose();
-            
-            _pendingHandles.Dispose();
-            
-            foreach (var clo in _closedLists)
-            {
-                clo.Dispose();
-            }
-            
-            foreach (var ol in _openLists)
-            {
-                ol.Dispose();
-            }
-            
-            foreach (var vnl in _visitedNodesLists)
-            {
-                vnl.Dispose();
-            }
 
-            foreach (var path in _paths)
+            foreach (var req in _requests)
             {
-                path.Value.Dispose();
+                req.path.Dispose();
+                req.visitedNodes.Dispose();
+                req.openList.Dispose();
+                req.closedList.Dispose();
             }
+            
+            _requests.Clear();
         }
 
         #endregion
@@ -96,32 +85,33 @@ namespace NavGridSystem
 
         #region new a*
 
-        private Dictionary<IAgent, NativeList<Cell>> _paths; // every agent has its own path, and it's reference by the index of the agent
+        private class PathRequest
+        {
+            public IAgent agent;
+            public NativeList<Cell> path;
+            public NativeHashSet<int> closedList;
+            public NativePriorityQueue<PathCellData> openList;
+            public NativeHashMap<int, PathCellData> visitedNodes;
+            public JobHandle handle;
+        }
 
-        private NativeList<JobHandle> _pendingHandles;
-        private List<NativeHashSet<int>> _closedLists;
-        private List<NativePriorityQueue<PathCellData>> _openLists;
-        private List<NativeHashMap<int, PathCellData>> _visitedNodesLists;
+        private List<PathRequest> _requests = new(10);
 
         private void Start()
         {
             ServiceLocator.Instance.RegisterService<INavigation>(this);
             var capacity = 10;
-            _paths = new Dictionary<IAgent, NativeList<Cell>>(capacity);
-            _pendingHandles = new NativeList<JobHandle>(capacity, Allocator.Persistent);
-            _closedLists = new List<NativeHashSet<int>>(capacity);
-            _openLists = new List<NativePriorityQueue<PathCellData>>(capacity);
-            _visitedNodesLists = new List<NativeHashMap<int, PathCellData>>(capacity);
+            _requests = new List<PathRequest>(capacity);
         }
 
         public void RequestPath(IAgent agent, Cell start, Cell end)
         {
             if (!end.isWalkable) return;
 
-            var closedList = new NativeHashSet<int>(64, Allocator.Persistent);
-            var openList = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.Persistent);
-            var visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent);
-            var path = new NativeList<Cell>(30, Allocator.Persistent);
+            var closedList = new NativeHashSet<int>(64, Allocator.TempJob);
+            var openList = new NativePriorityQueue<PathCellData>(_gridSystem.GetGridSize(), Allocator.TempJob);
+            var visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.TempJob);
+            var path = new NativeList<Cell>(30, Allocator.TempJob);
 
             JobHandle jobHandle = new AStarJob
             {
@@ -135,42 +125,44 @@ namespace NavGridSystem
                 endIndex = end.gridIndex
             }.Schedule();
             
-            _paths.Add(agent, path);
+            var req = new PathRequest {
+                agent = agent,
+                path = path,
+                closedList = closedList,
+                openList = openList,
+                visitedNodes = visitedNodes,
+                handle = jobHandle
+            };
             
-            _pendingHandles.Add(jobHandle);
-            
-            _closedLists.Add(closedList);
-            _openLists.Add(openList);
-            _visitedNodesLists.Add(visitedNodes);
+            _requests.Add(req);
         }
 
         private void FinishPaths()
         {
-            JobHandle.CompleteAll(_pendingHandles.AsArray());
+            NativeArray<JobHandle> handles = new (_requests.Count, Allocator.TempJob);
             
-            foreach (var kv in _paths)
-                kv.Key.SetPath(kv.Value);
-
-            foreach (var clo in _closedLists)
+            handles.CopyFrom(_requests.Select(r => r.handle).ToArray());
+            
+            JobHandle.CompleteAll(handles);
+            
+            foreach (var req in _requests)
             {
-                clo.Dispose();
+                var pathArray = new Cell[req.path.Length];
+                
+                for (int i = 0; i < req.path.Length; i++)
+                {
+                    pathArray[i] = req.path[i];
+                }
+                
+                req.agent.SetPath(pathArray);
+                
+                req.visitedNodes.Dispose();
+                req.openList.Dispose();
+                req.closedList.Dispose();
+                req.path.Dispose();
             }
             
-            foreach (var ol in _openLists)
-            {
-                ol.Dispose();
-            }
-            
-            foreach (var vnl in _visitedNodesLists)
-            {
-                vnl.Dispose();
-            }
-            
-            _pendingHandles.Clear();
-            _closedLists.Clear();
-            _openLists.Clear();
-            _visitedNodesLists.Clear();
-            _paths.Clear();
+            _requests.Clear();
         }
 
         private void LateUpdate() => FinishPaths();
