@@ -1,6 +1,7 @@
+using Pathfinding;
 using UnityEngine;
 
-namespace NavGridSystem
+namespace NavigationGraph
 {
     public class AgentNavigation : MonoBehaviour, IAgent
     {
@@ -10,6 +11,7 @@ namespace NavGridSystem
 
         [Header("Debug")] 
         [SerializeField] private bool _showPath;
+        private NavigationGraph _navigationGraph;
 
         private Cell[] _waypointsPath;
         private Transform _transform;
@@ -21,14 +23,11 @@ namespace NavGridSystem
         public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
         public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
 
-        #region Unity Methods
-
         private void Awake()
         {
             _transform = transform;
+            _navigationGraph = GetComponent<NavigationGraph>();
         }
-
-        // private void OnDestroy() => _waypointsPath.Dispose();
 
         private void OnValidate()
         {
@@ -40,50 +39,39 @@ namespace NavGridSystem
         private void Update()
         {
             if (!HasPath) return;
-            if (_currentWaypoint >= _waypointsPath.Length) 
+            if (_currentWaypoint >= _waypointsPath.Length)
+            {
                 _currentWaypoint = 0;
+                return;
+            }
             
             Vector3 distance = _waypointsPath[_currentWaypoint].position - _transform.position;
-            PathMovement(distance);
+            Move(distance);
+            Rotate(distance);
             CheckWaypoints(distance);
         }
 
-        private void OnDrawGizmos()
+        private void MapToGrid()
         {
-            if (!_showPath) return;
-            if (_waypointsPath == null || _waypointsPath.Length == 0) return;
-
-            Gizmos.color = Color.black;
-            
-            for (int i = _currentWaypoint; i < _waypointsPath.Length; i++)
-            {
-                Gizmos.DrawLine(i == _currentWaypoint ? transform.position : _waypointsPath[i - 1].position, _waypointsPath[i].position);
-                Gizmos.DrawCube(_waypointsPath[i].position, Vector3.one * 0.35f);
-            }
+            // If the agent is not on the grid, move it to the closest grid position
         }
-
-        #endregion
 
         public void RequestPath(Vector3 start, Vector3 end)
         {
             ClearPath();
-            // ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
+            
+            var startCell = _navigationGraph.GetCellWithWorldPosition(start);
+            var endCell = _navigationGraph.GetCellWithWorldPosition(end);
+            ServiceLocator.Instance.GetService<IPathfinding>().RequestPath(this, startCell, endCell);
         }
         
         public void RequestPath(Cell start, Cell end)
         {
             ClearPath();
-            // ServiceLocator.Instance.GetService<INavigation>().RequestPath(ref _waypointsPath, start, end);
-            ServiceLocator.Instance.GetService<INavigation>().RequestPath(this, start, end);
+            ServiceLocator.Instance.GetService<IPathfinding>().RequestPath(this, start, end);
         }
 
         public void SetPath(Cell[] path) => _waypointsPath = path;
-
-        private void PathMovement(Vector3 distance)
-        {
-            Move(distance);
-            Rotate(distance);
-        }
 
         private void Move(Vector3 distance)
         {
@@ -101,16 +89,29 @@ namespace NavGridSystem
             if (distance.magnitude > _changeWaypointDistance * _changeWaypointDistance) return;
 
             _currentWaypoint++;
-            if (_currentWaypoint >= _waypointsPath.Length)
+            if (_currentWaypoint++ >= _waypointsPath.Length)
             {
                 ClearPath();
-                _currentWaypoint = 0;
             }
         }
 
         private void ClearPath()
         {
             _waypointsPath = null;
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (!_showPath) return;
+            if (_waypointsPath == null || _waypointsPath.Length == 0) return;
+
+            Gizmos.color = Color.black;
+            
+            for (int i = _currentWaypoint; i < _waypointsPath.Length; i++)
+            {
+                Gizmos.DrawLine(i == _currentWaypoint ? transform.position : _waypointsPath[i - 1].position, _waypointsPath[i].position);
+                Gizmos.DrawCube(_waypointsPath[i].position, Vector3.one * 0.35f);
+            }
         }
     }
 }

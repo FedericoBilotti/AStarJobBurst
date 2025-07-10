@@ -1,9 +1,9 @@
 using Unity.Collections;
 using UnityEngine;
 
-namespace NavGridSystem
+namespace NavigationGraph
 {
-    public interface IGridSystem
+    public interface INavigationGraph
     {
         NativeArray<Cell> GetGrid();
         Cell GetRandomCell();
