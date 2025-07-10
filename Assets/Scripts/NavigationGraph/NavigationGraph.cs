@@ -1,12 +1,11 @@
-using System;
 using Unity.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using Vector3 = UnityEngine.Vector3;
 
-namespace NavGridSystem
+namespace NavigationGraph
 {
-    public class GridSystem : MonoBehaviour, IGridSystem
+    public class NavigationGraph : MonoBehaviour, INavigationGraph
     {
         [SerializeField] private bool _showGizmos;
         [SerializeField] private bool _showBox;
@@ -70,7 +69,7 @@ namespace NavGridSystem
 
         private Vector3 GetCellPosition(int gridX, int gridY)
         {
-            return transform.position + Vector3.right * (gridX * _cellDiameter + _cellSize * 0.5f) + Vector3.forward * (gridY * _cellDiameter + _cellSize * 0.5f);
+            return transform.position + Vector3.right * (gridX * _cellDiameter + _cellSize) + Vector3.forward * (gridY * _cellDiameter + _cellSize);
         }
 
         private bool IsCellWalkable(Vector3 cellPosition)
@@ -89,7 +88,7 @@ namespace NavGridSystem
         private void Start()
         {
             CreateGrid();
-            ServiceLocator.Instance.RegisterService<IGridSystem>(this);
+            ServiceLocator.Instance.RegisterService<INavigationGraph>(this);
         }
 
         private void OnDisable()
@@ -128,9 +127,9 @@ namespace NavGridSystem
         {
             if (!_showBox) return;
             
-            var gridPosition = transform.position + new Vector3(_gridSize.x * _cellDiameter, 0, _gridSize.y * _cellDiameter) * 0.5f;
+            var gridPosition = transform.position + Vector3.right * _gridSize.x / 2 + Vector3.forward * _gridSize.y / 2;
             
-            var boxSize = new Vector3(_gridSize.x * _cellDiameter, 1, _gridSize.y * _cellDiameter);
+            var boxSize = new Vector3(_gridSize.x, 1, _gridSize.y);
             Gizmos.color = Color.black;
             Gizmos.DrawWireCube(gridPosition, boxSize);
         }

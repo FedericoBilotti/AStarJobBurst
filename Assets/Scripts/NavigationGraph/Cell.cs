@@ -1,9 +1,8 @@
 using System;
-using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace NavGridSystem
+namespace NavigationGraph
 {
     public struct Cell : IEquatable<Cell>
     {

@@ -1,4 +1,4 @@
-using NavGridSystem;
+using NavigationGraph;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -22,7 +22,7 @@ public class Player : MonoBehaviour
     {
         // if (_agentNavigation.HasPath) return;
         
-        var gridSystem = ServiceLocator.Instance.GetService<IGridSystem>();
+        var gridSystem = ServiceLocator.Instance.GetService<INavigationGraph>();
         Cell myCell = gridSystem.GetCellWithWorldPosition(_transform.position);
         Cell target = gridSystem.GetCellWithWorldPosition(_followTarget.position);
         // Cell target = gridSystem.GetRandomCell();
