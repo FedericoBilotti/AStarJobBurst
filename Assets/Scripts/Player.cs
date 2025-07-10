@@ -25,6 +25,7 @@ public class Player : MonoBehaviour
         var gridSystem = ServiceLocator.Instance.GetService<IGridSystem>();
         Cell myCell = gridSystem.GetCellWithWorldPosition(_transform.position);
         Cell target = gridSystem.GetCellWithWorldPosition(_followTarget.position);
+        // Cell target = gridSystem.GetRandomCell();
 
         _agentNavigation.RequestPath(myCell, target);
     }

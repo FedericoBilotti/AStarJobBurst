@@ -9,8 +9,9 @@ namespace NavGridSystem
     public class GridSystem : MonoBehaviour, IGridSystem
     {
         [SerializeField] private bool _showGizmos;
-        [SerializeField] private bool _showGrid;
+        [SerializeField] private bool _showBox;
         [SerializeField] private bool _showLines;
+        [SerializeField] private bool _showCells;
         [SerializeField] private float _cellSize;
         [SerializeField] private Vector2Int _gridSize;
 
@@ -51,10 +52,10 @@ namespace NavGridSystem
             {
                 int x = i % _gridSize.x;
                 int y = i / _gridSize.x;
-                
-                Vector3 cellPosition = transform.position + Vector3.right * (x * _cellDiameter + _cellSize) + Vector3.forward * (y * _cellDiameter + _cellSize);
 
-                bool isWalkable = !Physics.SphereCast(cellPosition + Vector3.up * _maxDistance, _cellSize, Vector3.down, out RaycastHit raycastHit, _maxDistance, _notWalkableMask);
+                Vector3 cellPosition = GetCellPosition(x, y);
+
+                bool isWalkable = IsCellWalkable(cellPosition);
                 
                 _grid[i] = new Cell
                 {
@@ -66,6 +67,16 @@ namespace NavGridSystem
                 };
             }
         }
+
+        private Vector3 GetCellPosition(int gridX, int gridY)
+        {
+            return transform.position + Vector3.right * (gridX * _cellDiameter + _cellSize * 0.5f) + Vector3.forward * (gridY * _cellDiameter + _cellSize * 0.5f);
+        }
+
+        private bool IsCellWalkable(Vector3 cellPosition)
+        {
+            return !Physics.SphereCast(cellPosition + Vector3.up * _maxDistance, _cellSize, Vector3.down, out RaycastHit raycastHit, _maxDistance, _notWalkableMask);
+        }
         
         #region Unity Methods
 
@@ -73,13 +84,13 @@ namespace NavGridSystem
         {
             _cellSize = Mathf.Max(0.05f, _cellSize);
             _cellDiameter = _cellSize * 2;
-            
-            CreateGrid();
         }
 
-        private void Start() => ServiceLocator.Instance.RegisterService<IGridSystem>(this);
-
-#if UNITY_EDITOR
+        private void Start()
+        {
+            CreateGrid();
+            ServiceLocator.Instance.RegisterService<IGridSystem>(this);
+        }
 
         private void OnDisable()
         {
@@ -87,8 +98,6 @@ namespace NavGridSystem
                 _grid.Dispose();
         }
 
-#endif
-        
         private void OnDestroy()
         {
             if (_grid.IsCreated)
@@ -98,27 +107,53 @@ namespace NavGridSystem
         private void OnDrawGizmos()
         {
             if (!_showGizmos) return;
-            if (!_grid.IsCreated || _grid.Length == 0) return;
 
-            for (int i = 0; i < _grid.Length; i++)
+            DrawCubeForGrid();
+
+            if (!_showLines && !_showCells) return;
+
+            for (int i = 0; i < GetGridSize(); i++)
             {
-                Vector3 cellPosition = _grid[i].position;
-                
-                if (_showLines)
-                {
-                    Gizmos.color = Color.white;
-                    Gizmos.DrawLine(cellPosition + Vector3.up * _maxDistance, cellPosition);
-                }
+                int x = i % _gridSize.x;
+                int y = i / _gridSize.x;
 
-                if (_showGrid)
-                {
-                    Vector3 cellSize = new Vector3(.5f, 0, .5f) * _cellDiameter;
-                    Gizmos.color = _grid[i].isWalkable ? Color.green : Color.red;
-                    Gizmos.DrawWireCube(_grid[i].position, cellSize);
-                }
+                Vector3 cellPosition = GetCellPosition(x, y);
+                
+                DrawLinesForCells(cellPosition);
+                DrawCells(cellPosition);
             }
         }
-        
+
+        private void DrawCubeForGrid()
+        {
+            if (!_showBox) return;
+            
+            var gridPosition = transform.position + new Vector3(_gridSize.x * _cellDiameter, 0, _gridSize.y * _cellDiameter) * 0.5f;
+            
+            var boxSize = new Vector3(_gridSize.x * _cellDiameter, 1, _gridSize.y * _cellDiameter);
+            Gizmos.color = Color.black;
+            Gizmos.DrawWireCube(gridPosition, boxSize);
+        }
+
+        private void DrawLinesForCells(Vector3 cellPosition)
+        {
+            if (!_showLines) return;
+            
+            Gizmos.color = Color.white;
+            Gizmos.DrawLine(cellPosition + Vector3.up * _maxDistance, cellPosition);
+        }
+
+        private void DrawCells(Vector3 cellPosition)
+        {
+            if (!_showCells) return;
+            
+            Vector3 cellSize = new Vector3(.5f, 0, .5f) * _cellDiameter;
+            bool isWalkable = IsCellWalkable(cellPosition);
+            
+            Gizmos.color = isWalkable ? Color.green : Color.red;
+            Gizmos.DrawWireCube(cellPosition, cellSize);
+        }
+
         #endregion
     }
 }
