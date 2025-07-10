@@ -13765,7 +13765,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _showGizmos: 1
   _showGrid: 1
-  _showLines: 0
+  _showLines: 1
   _cellSize: 0.5
   _gridSize: {x: 100, y: 100}
   _maxDistance: 10

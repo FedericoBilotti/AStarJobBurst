@@ -1,14 +1,7 @@
-using System.Collections.Generic;
-using Unity.Collections;
 using UnityEngine;
 
 namespace NavGridSystem
 {
-    public interface IAgent
-    {
-        void SetPath(Cell[] path);
-    }
-    
     public class AgentNavigation : MonoBehaviour, IAgent
     {
         [SerializeField] private float _speed = 5;

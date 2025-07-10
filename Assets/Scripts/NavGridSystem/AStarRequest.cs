@@ -29,6 +29,16 @@ namespace NavGridSystem
             _openList.Dispose();
             _visitedNodes.Dispose();
             _closedList.Dispose();
+
+            foreach (var pathRequest in _requests)
+            {
+                pathRequest.visitedNodes.Dispose();
+                pathRequest.closedList.Dispose();
+                pathRequest.openList.Dispose();
+                pathRequest.path.Dispose();
+            }
+            
+            _pathRequestPool.Clear();
         }
 
         #endregion
@@ -86,7 +96,7 @@ namespace NavGridSystem
             public NativePriorityQueue<PathCellData> openList;
             public NativeHashMap<int, PathCellData> visitedNodes;
         }
-
+        
         private List<PathRequest> _requests;
         private IObjectPool<PathRequest> _pathRequestPool;
 
@@ -95,9 +105,9 @@ namespace NavGridSystem
             ServiceLocator.Instance.RegisterService<INavigation>(this);
             
             // Initialize the pool
-            var capacity = 10;
-            var maxSize = 100;
-            _requests = new List<PathRequest>(capacity);
+            const int CAPACITY = 10;
+            const int MAX_SIZE = 100;
+            _requests = new List<PathRequest>(CAPACITY);
             _pathRequestPool = new ObjectPool<PathRequest>(createFunc: () => new PathRequest
             {
                 path = new NativeList<Cell>(30, Allocator.Persistent),
@@ -117,7 +127,7 @@ namespace NavGridSystem
                 if (pathReq.closedList.IsCreated) pathReq.closedList.Dispose();
                 if (pathReq.openList.IsCreated) pathReq.openList.Dispose();
                 if (pathReq.visitedNodes.IsCreated) pathReq.visitedNodes.Dispose();
-            }, defaultCapacity: capacity, maxSize: maxSize);
+            }, defaultCapacity: CAPACITY, maxSize: MAX_SIZE);
         }
 
         public void RequestPath(IAgent agent, Cell start, Cell end)
