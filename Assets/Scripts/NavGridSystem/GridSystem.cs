@@ -73,13 +73,13 @@ namespace NavGridSystem
         {
             _cellSize = Mathf.Max(0.05f, _cellSize);
             _cellDiameter = _cellSize * 2;
-            
-            CreateGrid();
         }
 
-        private void Start() => ServiceLocator.Instance.RegisterService<IGridSystem>(this);
-
-#if UNITY_EDITOR
+        private void Start()
+        {
+            CreateGrid();
+            ServiceLocator.Instance.RegisterService<IGridSystem>(this);
+        }
 
         private void OnDisable()
         {
@@ -87,8 +87,6 @@ namespace NavGridSystem
                 _grid.Dispose();
         }
 
-#endif
-        
         private void OnDestroy()
         {
             if (_grid.IsCreated)
@@ -97,6 +95,10 @@ namespace NavGridSystem
 
         private void OnDrawGizmos()
         {
+            var gridPosition = transform.position + Vector3.right * _gridSize.x / 2 + Vector3.forward * _gridSize.y / 2;
+            var boxSize = new Vector3(_gridSize.x, 1, _gridSize.y);
+            Gizmos.DrawWireCube(gridPosition, boxSize);
+            
             if (!_showGizmos) return;
             if (!_grid.IsCreated || _grid.Length == 0) return;
 
