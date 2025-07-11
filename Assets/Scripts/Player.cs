@@ -22,11 +22,12 @@ public class Player : MonoBehaviour
     {
         // if (_agentNavigation.HasPath) return;
         
+        Vector3 myPos = _transform.position;
+        Vector3 targetPos = _followTarget.position;
+        
         var gridSystem = ServiceLocator.Instance.GetService<INavigationGraph>();
-        Cell myCell = gridSystem.GetCellWithWorldPosition(_transform.position);
-        Cell target = gridSystem.GetCellWithWorldPosition(_followTarget.position);
-        // Cell target = gridSystem.GetRandomCell();
+        Vector3 target = gridSystem.GetRandomCell().position;
 
-        _agentNavigation.RequestPath(myCell, target);
+        _agentNavigation.RequestPath(myPos, target);
     }
 }

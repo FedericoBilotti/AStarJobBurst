@@ -70,7 +70,7 @@ namespace Pathfinding
             return pathArray;
         }
 
-        public void LaunchPath() { }
+        public void FinishPath() { }
 
         public void Dispose()
         {

@@ -11,22 +11,21 @@ namespace NavigationGraph
 
         [Header("Debug")] 
         [SerializeField] private bool _showPath;
-        private NavigationGraph _navigationGraph;
 
         private Cell[] _waypointsPath;
         private Transform _transform;
 
         private int _currentWaypoint;
-        
+
+        public PathStatus Status { get; private set; } = PathStatus.Idle;
         public bool HasPath => _waypointsPath is { Length: > 0 };
         public float Speed { get => _speed; set => _speed = Mathf.Max(0.01f, value); }
         public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
         public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
 
-        private void Awake()
+        private void Start()
         {
             _transform = transform;
-            _navigationGraph = GetComponent<NavigationGraph>();
         }
 
         private void OnValidate()
@@ -38,6 +37,8 @@ namespace NavigationGraph
 
         private void Update()
         {
+            MapToGrid();
+            
             if (!HasPath) return;
             if (_currentWaypoint >= _waypointsPath.Length)
             {
@@ -56,22 +57,30 @@ namespace NavigationGraph
             // If the agent is not on the grid, move it to the closest grid position
         }
 
-        public void RequestPath(Vector3 start, Vector3 end)
+        public void RequestPath(Vector3 startPosition, Vector3 endPosition)
         {
+            if (Status == PathStatus.Requested) return;
+            
             ClearPath();
             
-            var startCell = _navigationGraph.GetCellWithWorldPosition(start);
-            var endCell = _navigationGraph.GetCellWithWorldPosition(end);
+            var navigationGraph = ServiceLocator.Instance.GetService<INavigationGraph>();
+            
+            Cell startCell = navigationGraph.GetCellWithWorldPosition(startPosition);
+            Cell endCell = navigationGraph.GetCellWithWorldPosition(endPosition);
             ServiceLocator.Instance.GetService<IPathfinding>().RequestPath(this, startCell, endCell);
         }
-        
-        public void RequestPath(Cell start, Cell end)
-        {
-            ClearPath();
-            ServiceLocator.Instance.GetService<IPathfinding>().RequestPath(this, start, end);
-        }
 
-        public void SetPath(Cell[] path) => _waypointsPath = path;
+        public void SetPath(Cell[] path)
+        {
+            if (path == null)
+            {
+                Status = PathStatus.Failed;
+                return;
+            }
+
+            _waypointsPath = path;
+            Status = PathStatus.Success;
+        }
 
         private void Move(Vector3 distance)
         {
@@ -98,6 +107,15 @@ namespace NavigationGraph
         private void ClearPath()
         {
             _waypointsPath = null;
+            // Status = PathStatus.Idle; ¿?
+        }
+
+        public enum PathStatus
+        {
+            Idle,
+            Failed,
+            Requested,
+            Success
         }
 
         private void OnDrawGizmos()
