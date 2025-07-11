@@ -91,12 +91,6 @@ namespace NavigationGraph
             ServiceLocator.Instance.RegisterService<INavigationGraph>(this);
         }
 
-        private void OnDisable()
-        {
-            if (_grid.IsCreated) 
-                _grid.Dispose();
-        }
-
         private void OnDestroy()
         {
             if (_grid.IsCreated)

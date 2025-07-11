@@ -8,44 +8,60 @@ namespace Pathfinding
         [SerializeField] private PathRequestType _requestType;
         private IPathRequest _singlePathRequest;
         private IPathRequest _multiPathRequest;
+        private IPathRequest _schedulePathRequest;
 
         private void Awake()
         {
             // Should be injected
-            _singlePathRequest = new OnePathRequester(GetComponent<INavigationGraph>());
-            _multiPathRequest = new MultiplePathRequester(GetComponent<INavigationGraph>());
+            var navigationGraph = GetComponent<INavigationGraph>();
+            _singlePathRequest = new OnePathRequester(navigationGraph);
+            _multiPathRequest = new MultiplePathRequester(navigationGraph);
+            _schedulePathRequest = new SchedulePathRequest(navigationGraph);
         }
 
         private void Start() => ServiceLocator.Instance.RegisterService<IPathfinding>(this);
 
         public void RequestPath(IAgent agent, Cell start, Cell end)
         {
-            if (_requestType == PathRequestType.Single)
+            switch (_requestType)
             {
-                _singlePathRequest.RequestPath(agent, start, end);
-            }
-            else
-            {
-                _multiPathRequest.RequestPath(agent, start, end);
+                case PathRequestType.Single:
+                    _singlePathRequest.RequestPath(agent, start, end);
+                    break;
+
+                case PathRequestType.Multiple:
+                    _multiPathRequest.RequestPath(agent, start, end);
+                    break;
+
+                default:
+                    _schedulePathRequest.RequestPath(agent, start, end);
+                    break;
             }
         }
 
         private void LateUpdate()
         {
-            if (_requestType == PathRequestType.Single)
+            switch (_requestType)
             {
-                _singlePathRequest.LaunchPath();
-            }
-            else
-            {
-                _multiPathRequest.LaunchPath();
+                case PathRequestType.Single:
+                    _singlePathRequest.FinishPath();
+                    break;
+
+                case PathRequestType.Multiple:
+                    _multiPathRequest.FinishPath();
+                    break;
+
+                default:
+                    _schedulePathRequest.FinishPath();
+                    break;
             }
         }
 
         private enum PathRequestType
         {
             Single,
-            Multiple
+            Multiple,
+            Schedule
         }
 
         private void OnDestroy()

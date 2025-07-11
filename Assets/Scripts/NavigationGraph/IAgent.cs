@@ -4,8 +4,7 @@ namespace NavigationGraph
 {
     public interface IAgent
     {
-        void RequestPath(Cell start, Cell end);
-        void RequestPath(Vector3 start, Vector3 end);
+        void RequestPath(Vector3 startPosition, Vector3 endPosition);
         void SetPath(Cell[] path);
     }
 }
