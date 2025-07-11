@@ -68,6 +68,7 @@ namespace Pathfinding
         {
             _singlePathRequest.Clear();
             _multiPathRequest.Clear();
+            _schedulePathRequest.Clear();
         }
     }
 }
