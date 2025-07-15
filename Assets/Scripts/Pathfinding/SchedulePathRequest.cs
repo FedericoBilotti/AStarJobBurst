@@ -80,12 +80,7 @@ namespace Pathfinding
                 if (!req.handle.IsCompleted) continue;
                 
                 req.handle.Complete();
-
-                var pathArray = new Cell[req.path.Length];
-                for (int j = 0; j < req.path.Length; j++)
-                    pathArray[j] = req.path[j];
-
-                req.agent.SetPath(pathArray);
+                req.agent.SetPath(req.path);
 
                 _pathRequestPool.Release(req);
                 _requests.RemoveAt(i);

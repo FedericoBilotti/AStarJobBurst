@@ -20,7 +20,7 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        // if (_agentNavigation.HasPath) return;
+        if (_agentNavigation.HasPath) return;
         
         Vector3 myPos = _transform.position;
         Vector3 targetPos = _followTarget.position;

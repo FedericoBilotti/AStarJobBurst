@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Pathfinding;
+using Unity.Collections;
 using UnityEngine;
 
 namespace NavigationGraph
@@ -12,19 +14,20 @@ namespace NavigationGraph
         [Header("Debug")] 
         [SerializeField] private bool _showPath;
 
-        private Cell[] _waypointsPath;
+        private List<Vector3> _waypointsPath;
         private Transform _transform;
 
         private int _currentWaypoint;
 
         public PathStatus Status { get; private set; } = PathStatus.Idle;
-        public bool HasPath => _waypointsPath is { Length: > 0 };
+        public bool HasPath => _waypointsPath != null && _waypointsPath.Count > 0 && Status == PathStatus.Success;
         public float Speed { get => _speed; set => _speed = Mathf.Max(0.01f, value); }
         public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
         public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
 
         private void Start()
         {
+            _waypointsPath = new List<Vector3>(10);
             _transform = transform;
         }
 
@@ -40,13 +43,13 @@ namespace NavigationGraph
             MapToGrid();
             
             if (!HasPath) return;
-            if (_currentWaypoint >= _waypointsPath.Length)
+            if (_currentWaypoint >= _waypointsPath.Count)
             {
-                _currentWaypoint = 0;
+                ClearPath();
                 return;
             }
             
-            Vector3 distance = _waypointsPath[_currentWaypoint].position - _transform.position;
+            Vector3 distance = _waypointsPath[_currentWaypoint] - _transform.position;
             Move(distance);
             Rotate(distance);
             CheckWaypoints(distance);
@@ -70,15 +73,19 @@ namespace NavigationGraph
             ServiceLocator.Instance.GetService<IPathfinding>().RequestPath(this, startCell, endCell);
         }
 
-        public void SetPath(Cell[] path)
+        public void SetPath(NativeList<Cell> path)
         {
-            if (path == null)
+            if (!path.IsCreated || path.Length == 0)
             {
                 Status = PathStatus.Failed;
                 return;
             }
 
-            _waypointsPath = path;
+            foreach (var cell in path)
+            {
+                _waypointsPath.Add(cell.position);
+            }
+            
             Status = PathStatus.Success;
         }
 
@@ -98,7 +105,7 @@ namespace NavigationGraph
             if (distance.magnitude > _changeWaypointDistance * _changeWaypointDistance) return;
 
             _currentWaypoint++;
-            if (_currentWaypoint++ >= _waypointsPath.Length)
+            if (_currentWaypoint++ >= _waypointsPath.Count)
             {
                 ClearPath();
             }
@@ -106,8 +113,9 @@ namespace NavigationGraph
 
         private void ClearPath()
         {
-            _waypointsPath = null;
-            // Status = PathStatus.Idle; ¿?
+            _currentWaypoint = 0;
+            _waypointsPath.Clear();
+            Status = PathStatus.Idle;
         }
 
         public enum PathStatus
@@ -121,14 +129,14 @@ namespace NavigationGraph
         private void OnDrawGizmos()
         {
             if (!_showPath) return;
-            if (_waypointsPath == null || _waypointsPath.Length == 0) return;
+            if (_waypointsPath == null || _waypointsPath.Count == 0) return;
 
             Gizmos.color = Color.black;
             
-            for (int i = _currentWaypoint; i < _waypointsPath.Length; i++)
+            for (int i = _currentWaypoint; i < _waypointsPath.Count; i++)
             {
-                Gizmos.DrawLine(i == _currentWaypoint ? transform.position : _waypointsPath[i - 1].position, _waypointsPath[i].position);
-                Gizmos.DrawCube(_waypointsPath[i].position, Vector3.one * 0.35f);
+                Gizmos.DrawLine(i == _currentWaypoint ? transform.position : _waypointsPath[i - 1], _waypointsPath[i]);
+                Gizmos.DrawCube(_waypointsPath[i], Vector3.one * 0.35f);
             }
         }
     }

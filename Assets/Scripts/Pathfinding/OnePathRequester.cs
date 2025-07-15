@@ -54,20 +54,7 @@ namespace Pathfinding
             }.Schedule();
 
             jobHandle.Complete();
-            
-            Cell[] pathArray = ConvertPathToArray();
-            agent.SetPath(pathArray);
-        }
-
-        private Cell[] ConvertPathToArray()
-        {
-            var pathArray = new Cell[_path.Length];
-            for (int i = 0; i < _path.Length; i++)
-            {
-                pathArray[i] = _path[i];
-            }
-
-            return pathArray;
+            agent.SetPath(_path);
         }
 
         public void FinishPath() { }

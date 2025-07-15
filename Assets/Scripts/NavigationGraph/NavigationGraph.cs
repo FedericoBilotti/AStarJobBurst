@@ -93,7 +93,7 @@ namespace NavigationGraph
 
         private void OnDestroy()
         {
-            if (_grid.IsCreated)
+            if (_grid.IsCreated) 
                 _grid.Dispose();
         }
 

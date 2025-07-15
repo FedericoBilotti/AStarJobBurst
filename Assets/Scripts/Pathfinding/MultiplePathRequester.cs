@@ -84,13 +84,7 @@ namespace Pathfinding
 
             foreach (var req in _requests)
             {
-                var pathArray = new Cell[req.path.Length];
-                for (int i = 0; i < req.path.Length; i++)
-                {
-                    pathArray[i] = req.path[i];
-                }
-
-                req.agent.SetPath(pathArray);
+                req.agent.SetPath(req.path);
                 _pathRequestPool.Release(req);
             }
 
