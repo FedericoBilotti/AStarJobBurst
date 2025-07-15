@@ -46,6 +46,7 @@ namespace NavigationGraph
             if (_currentWaypoint >= _waypointsPath.Count)
             {
                 ClearPath();
+                Status = PathStatus.Idle;
                 return;
             }
             
@@ -64,6 +65,7 @@ namespace NavigationGraph
         {
             if (Status == PathStatus.Requested) return;
             
+            Status = PathStatus.Requested;
             ClearPath();
             
             var navigationGraph = ServiceLocator.Instance.GetService<INavigationGraph>();
@@ -85,7 +87,7 @@ namespace NavigationGraph
             {
                 _waypointsPath.Add(cell.position);
             }
-            
+
             Status = PathStatus.Success;
         }
 
@@ -108,6 +110,7 @@ namespace NavigationGraph
             if (_currentWaypoint++ >= _waypointsPath.Count)
             {
                 ClearPath();
+                Status = PathStatus.Idle;
             }
         }
 
@@ -115,7 +118,6 @@ namespace NavigationGraph
         {
             _currentWaypoint = 0;
             _waypointsPath.Clear();
-            Status = PathStatus.Idle;
         }
 
         public enum PathStatus

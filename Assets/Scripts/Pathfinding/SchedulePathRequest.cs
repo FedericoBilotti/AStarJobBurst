@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NavigationGraph;
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine;
 using UnityEngine.Pool;
 using Utilities;
 
@@ -78,7 +79,7 @@ namespace Pathfinding
                 var req = _requests[i];
 
                 if (!req.handle.IsCompleted) continue;
-                
+
                 req.handle.Complete();
                 req.agent.SetPath(req.path);
 

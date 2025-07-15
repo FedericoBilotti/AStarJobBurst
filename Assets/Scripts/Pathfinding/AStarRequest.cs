@@ -33,6 +33,7 @@ namespace Pathfinding
                     _multiPathRequest.RequestPath(agent, start, end);
                     break;
 
+                case PathRequestType.Schedule:
                 default:
                     _schedulePathRequest.RequestPath(agent, start, end);
                     break;
@@ -51,6 +52,7 @@ namespace Pathfinding
                     _multiPathRequest.FinishPath();
                     break;
 
+                case PathRequestType.Schedule:
                 default:
                     _schedulePathRequest.FinishPath();
                     break;
