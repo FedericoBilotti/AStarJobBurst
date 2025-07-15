@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using NavigationGraph;
 using Unity.Collections;
 using Unity.Jobs;
-using UnityEngine;
 using UnityEngine.Pool;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.Strategy
 {
     public class SchedulePathRequest : IPathRequest, IDisposable
     {

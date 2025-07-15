@@ -1,4 +1,5 @@
 using NavigationGraph;
+using Pathfinding.Strategy;
 using UnityEngine;
 
 namespace Pathfinding
@@ -12,14 +13,14 @@ namespace Pathfinding
 
         private void Awake()
         {
+            ServiceLocator.Instance.RegisterService<IPathfinding>(this);
+            
             // Should be injected
             var navigationGraph = GetComponent<INavigationGraph>();
             _singlePathRequest = new OnePathRequester(navigationGraph);
             _multiPathRequest = new MultiplePathRequester(navigationGraph);
             _schedulePathRequest = new SchedulePathRequest(navigationGraph);
         }
-
-        private void Start() => ServiceLocator.Instance.RegisterService<IPathfinding>(this);
 
         public void RequestPath(IAgent agent, Cell start, Cell end)
         {

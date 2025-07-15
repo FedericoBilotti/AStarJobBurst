@@ -4,7 +4,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.Strategy
 {
     /// <summary>
     /// A path requester that block the thread to find the path.

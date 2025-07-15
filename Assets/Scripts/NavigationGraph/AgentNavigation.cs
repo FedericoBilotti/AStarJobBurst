@@ -14,6 +14,8 @@ namespace NavigationGraph
         [Header("Debug")] 
         [SerializeField] private bool _showPath;
 
+        private IPathfinding _pathfinding;
+        private INavigationGraph _graph;
         private List<Vector3> _waypointsPath;
         private Transform _transform;
 
@@ -29,6 +31,8 @@ namespace NavigationGraph
         {
             _waypointsPath = new List<Vector3>(10);
             _transform = transform;
+            _pathfinding = ServiceLocator.Instance.GetService<IPathfinding>();
+            _graph = ServiceLocator.Instance.GetService<INavigationGraph>();
         }
 
         private void OnValidate()
@@ -68,11 +72,9 @@ namespace NavigationGraph
             Status = PathStatus.Requested;
             ClearPath();
             
-            var navigationGraph = ServiceLocator.Instance.GetService<INavigationGraph>();
-            
-            Cell startCell = navigationGraph.GetCellWithWorldPosition(startPosition);
-            Cell endCell = navigationGraph.GetCellWithWorldPosition(endPosition);
-            ServiceLocator.Instance.GetService<IPathfinding>().RequestPath(this, startCell, endCell);
+            Cell startCell = _graph.GetCellWithWorldPosition(startPosition);
+            Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
+            _pathfinding.RequestPath(this, startCell, endCell);
         }
 
         public void SetPath(NativeList<Cell> path)

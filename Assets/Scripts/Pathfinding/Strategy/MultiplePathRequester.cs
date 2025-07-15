@@ -7,7 +7,7 @@ using Unity.Jobs;
 using UnityEngine.Pool;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.Strategy
 {
     /// <summary>
     /// A path requester that accumulates jobs to find the path.
