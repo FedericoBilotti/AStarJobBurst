@@ -108,12 +108,10 @@ namespace NavigationGraph
         {
             if (distance.magnitude > _changeWaypointDistance * _changeWaypointDistance) return;
 
-            _currentWaypoint++;
-            if (_currentWaypoint++ >= _waypointsPath.Count)
-            {
-                ClearPath();
-                Status = PathStatus.Idle;
-            }
+            if (++_currentWaypoint < _waypointsPath.Count) return;
+            
+            ClearPath();
+            Status = PathStatus.Idle;
         }
 
         private void ClearPath()

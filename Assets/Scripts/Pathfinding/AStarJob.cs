@@ -1,3 +1,4 @@
+using System.IO;
 using NavigationGraph;
 using Unity.Burst;
 using Unity.Collections;
@@ -97,6 +98,7 @@ namespace Pathfinding
             return 14 * xDistance + 10 * (zDistance - xDistance);
         }
 
+        // Maybe this can be improved with moving to another job, and maybe parallelizing the path reversing
         private void ReversePath(int end)
         {
             int currentIndex = end;
@@ -106,26 +108,28 @@ namespace Pathfinding
                 finalPath.Add(grid[currentIndex]);
                 currentIndex = visitedNodes[currentIndex].cameFrom;
             }
+            
+            var newPath = new NativeList<Cell>(finalPath.Length, Allocator.TempJob);
 
-            // finalPath = SimplifyPath(finalPath);
-            finalPath.Reverse();
+            SimplifyPath(newPath);
+            newPath.Reverse();
+            finalPath.CopyFrom(newPath);
+            newPath.Dispose();
         }
 
-        private NativeList<Cell> SimplifyPath(NativeList<Cell> path)
+        private void SimplifyPath(NativeList<Cell> path)
         {
-            var newPath = new NativeList<Cell>(15, Allocator.Persistent);
-            Vector2 lastPos = Vector2.zero;
+            Vector2 lastDir = Vector2.zero;
             
-            for (int i = 1; i < path.Length; i++)
+            path.Add(finalPath[0]);
+            for (int i = 1; i < finalPath.Length; i++)
             {
-                Vector2 newDir = new Vector2(path[i - 1].x - path[i].x, path[i - 1].y - path[i].y);
-                if (newDir != lastPos) 
-                    newPath.Add(path[i]);
+                Vector2 newDir = new Vector2(finalPath[i - 1].x - finalPath[i].x, finalPath[i - 1].y - finalPath[i].y);
+                if (newDir != lastDir) 
+                    path.Add(finalPath[i]);
                 
-                lastPos = newDir;
+                lastDir = newDir;
             }
-
-            return newPath;
         }
     }
 }
