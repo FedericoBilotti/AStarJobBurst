@@ -24,6 +24,7 @@ namespace NavigationGraph
 
         public NativeArray<Cell> GetGrid() => _grid;
         public int GetGridSize() => _gridSize.x * _gridSize.y;
+
         public int GetGridSizeX() => _gridSize.x;
 
         public Cell GetRandomCell() => _grid[Random.Range(0, _grid.Length)];
@@ -36,6 +37,20 @@ namespace NavigationGraph
             int y = Mathf.Clamp(Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter), 0, _gridSize.y - 1);
             
             return _grid[x + y * _gridSize.x];
+        }
+
+        public bool IsInGrid(Vector3 worldPosition)
+        {
+            Vector3 gridPos = worldPosition - transform.position;
+            
+            int x = Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter);
+            int y = Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter);
+            
+            if (x < 0 || x >= _gridSize.x || y < 0 || y >= _gridSize.y)
+                return false;
+
+            int gridIndex = x + y * _gridSize.x;
+            return _grid[gridIndex].isWalkable;
         }
 
         private void CreateGrid()
@@ -85,7 +100,7 @@ namespace NavigationGraph
             _cellDiameter = _cellSize * 2;
         }
 
-        private void Start()
+        private void Awake()
         {
             CreateGrid();
             ServiceLocator.Instance.RegisterService<INavigationGraph>(this);

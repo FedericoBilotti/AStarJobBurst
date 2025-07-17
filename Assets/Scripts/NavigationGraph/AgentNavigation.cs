@@ -63,11 +63,26 @@ namespace NavigationGraph
         private void MapToGrid()
         {
             // If the agent is not on the grid, move it to the closest grid position
+            if (IsAgentInGrid()) return;
+            
+            MapToNearestCellPosition();
         }
+
+        private void MapToNearestCellPosition()
+        {
+            
+        }
+
+        private bool IsAgentInGrid() => _graph.IsInGrid(_transform.position);
 
         public void RequestPath(Vector3 startPosition, Vector3 endPosition)
         {
             if (Status == PathStatus.Requested) return;
+            if (!IsAgentInGrid())
+            {
+                Debug.LogWarning("Agent is not in the grid");
+                return;
+            }
             
             Status = PathStatus.Requested;
             ClearPath();

@@ -44,7 +44,6 @@ namespace Pathfinding.Strategy
             JobHandle jobHandle = new AStarJob
             {
                 grid = _navigationGraph.GetGrid(),
-                finalPath = _path,
                 closedList = _closedList,
                 openList = _openList,
                 visitedNodes = _visitedNodes,

@@ -1,6 +1,4 @@
-using System.IO;
 using NavigationGraph;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
@@ -8,8 +6,7 @@ using Utilities;
 
 namespace Pathfinding
 {
-    [BurstCompile]
-    internal struct AStarJob : IJob
+    public struct AStarOldImplementationJob : IJob
     {
         [ReadOnly] public NativeArray<Cell> grid;
 
@@ -97,11 +94,10 @@ namespace Pathfinding
 
             return 14 * xDistance + 10 * (zDistance - xDistance);
         }
-
-        // Maybe this can be improved with moving to another job, and maybe parallelizing the path reversing
-        private void ReversePath(int end)
+        
+        private void ReversePath(int lastIndex)
         {
-            int currentIndex = end;
+            int currentIndex = lastIndex;
 
             while (currentIndex != -1)
             {
@@ -113,7 +109,8 @@ namespace Pathfinding
 
             SimplifyPath(newPath);
             newPath.Reverse();
-            finalPath.CopyFrom(newPath);
+            finalPath.Clear();
+            finalPath.AddRange(newPath.AsArray());
             newPath.Dispose();
         }
 

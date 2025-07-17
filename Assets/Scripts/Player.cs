@@ -20,15 +20,15 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        if (_agentNavigation.HasPath) return;
+        // if (_agentNavigation.HasPath) return;
         
         Vector3 myPos = _transform.position;
-        // Vector3 targetPos = _followTarget.position;
+        Vector3 target = _followTarget.position;
         
-        var gridSystem = ServiceLocator.Instance.GetService<INavigationGraph>();
-        var target = GetRandomTarget(gridSystem);
+        // var gridSystem = ServiceLocator.Instance.GetService<INavigationGraph>();
+        //var target = GetRandomTarget(gridSystem);
             
-        _agentNavigation.RequestPath(myPos, target.position);
+        _agentNavigation.RequestPath(myPos, target);
     }
 
     private Cell GetRandomTarget(INavigationGraph graph)

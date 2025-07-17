@@ -8,6 +8,7 @@ namespace NavigationGraph
         NativeArray<Cell> GetGrid();
         Cell GetRandomCell();
         Cell GetCellWithWorldPosition(Vector3 worldPosition);
+        bool IsInGrid(Vector3 worldPosition);
         int GetGridSizeX();
         int GetGridSize();
     }
