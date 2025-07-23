@@ -1,35 +1,31 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using NavigationGraph;
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine;
 using UnityEngine.Pool;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.RequesterStrategy
 {
-    /// <summary>
-    /// A path requester that accumulates jobs to find the path.
-    /// </summary>
-    public class MultiplePathRequester : IPathRequest, IDisposable
+    public class SchedulePathRequest : IPathRequest, IDisposable
     {
         private readonly INavigationGraph _navigationGraph;
 
         private List<PathRequest> _requests;
         private IObjectPool<PathRequest> _pathRequestPool;
 
-        public MultiplePathRequester(INavigationGraph navigationGraph)
+        public SchedulePathRequest(INavigationGraph navigationGraph)
         {
             _navigationGraph = navigationGraph;
-
             InitializeRequesters();
         }
 
         private void InitializeRequesters()
         {
-            const int CAPACITY = 10;
-            const int MAX_SIZE = 100;
+            const int CAPACITY = 100;
+            const int MAX_SIZE = 1000;
             _requests = new List<PathRequest>(CAPACITY);
             _pathRequestPool = new ObjectPool<PathRequest>(createFunc: () => new PathRequest
             {
@@ -52,17 +48,16 @@ namespace Pathfinding
                 if (pathReq.visitedNodes.IsCreated) pathReq.visitedNodes.Dispose();
             }, defaultCapacity: CAPACITY, maxSize: MAX_SIZE);
         }
-
-        public void RequestPath(IAgent agent, Cell start, Cell end)
+        
+        public bool RequestPath(IAgent agent, Cell start, Cell end)
         {
-            if (!end.isWalkable) return;
+            if (!end.isWalkable) return false;
 
             PathRequest pathRequest = _pathRequestPool.Get();
 
-            JobHandle jobHandle = new AStarJob
+            JobHandle aStarJob = new AStarJob
             {
                 grid = _navigationGraph.GetGrid(),
-                finalPath = pathRequest.path,
                 closedList = pathRequest.closedList,
                 openList = pathRequest.openList,
                 visitedNodes = pathRequest.visitedNodes,
@@ -70,38 +65,43 @@ namespace Pathfinding
                 startIndex = start.gridIndex,
                 endIndex = end.gridIndex
             }.Schedule();
+            
+            JobHandle postAStarJob = new PostProcessAStarJob
+            {
+                grid = _navigationGraph.GetGrid(),
+                visitedNodes = pathRequest.visitedNodes,
+                endIndex = end.gridIndex,
+                finalPath = pathRequest.path
+            }.Schedule(aStarJob);
 
             pathRequest.agent = agent;
-            pathRequest.handle = jobHandle;
+            pathRequest.handle = postAStarJob;
             _requests.Add(pathRequest);
+
+            return true;
         }
 
         public void FinishPath()
         {
-            NativeArray<JobHandle> handles = new(_requests.Count, Allocator.TempJob);
-            handles.CopyFrom(_requests.Select(r => r.handle).ToArray());
-            JobHandle.CompleteAll(handles);
-
-            foreach (var req in _requests)
+            for (int i = _requests.Count - 1; i >= 0; i--)
             {
-                var pathArray = new Cell[req.path.Length];
-                for (int i = 0; i < req.path.Length; i++)
-                {
-                    pathArray[i] = req.path[i];
-                }
+                var req = _requests[i];
 
-                req.agent.SetPath(pathArray);
+                if (!req.handle.IsCompleted) continue;
+
+                req.handle.Complete();
+                req.agent.SetPath(req.path);
+
                 _pathRequestPool.Release(req);
+                _requests.RemoveAt(i);
             }
-
-            _requests.Clear();
-            handles.Dispose();
         }
 
         public void Dispose()
         {
             foreach (var pathRequest in _requests)
             {
+                pathRequest.handle.Complete();
                 pathRequest.visitedNodes.Dispose();
                 pathRequest.closedList.Dispose();
                 pathRequest.openList.Dispose();

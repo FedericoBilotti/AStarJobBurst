@@ -4,7 +4,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.Strategy
 {
     /// <summary>
     /// A path requester that block the thread to find the path.
@@ -32,9 +32,9 @@ namespace Pathfinding
             _path = new NativeList<Cell>(100, Allocator.Persistent);
         }
         
-        public void RequestPath(IAgent agent, Cell start, Cell end)
+        public bool RequestPath(IAgent agent, Cell start, Cell end)
         {
-            if (!end.isWalkable) return;
+            if (!end.isWalkable) return false;
 
             _openList.Clear();
             _visitedNodes.Clear();
@@ -44,7 +44,6 @@ namespace Pathfinding
             JobHandle jobHandle = new AStarJob
             {
                 grid = _navigationGraph.GetGrid(),
-                finalPath = _path,
                 closedList = _closedList,
                 openList = _openList,
                 visitedNodes = _visitedNodes,
@@ -54,20 +53,9 @@ namespace Pathfinding
             }.Schedule();
 
             jobHandle.Complete();
-            
-            Cell[] pathArray = ConvertPathToArray();
-            agent.SetPath(pathArray);
-        }
+            agent.SetPath(_path);
 
-        private Cell[] ConvertPathToArray()
-        {
-            var pathArray = new Cell[_path.Length];
-            for (int i = 0; i < _path.Length; i++)
-            {
-                pathArray[i] = _path[i];
-            }
-
-            return pathArray;
+            return true;
         }
 
         public void FinishPath() { }

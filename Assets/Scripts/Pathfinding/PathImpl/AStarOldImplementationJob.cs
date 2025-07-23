@@ -1,5 +1,4 @@
 using NavigationGraph;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
@@ -7,8 +6,7 @@ using Utilities;
 
 namespace Pathfinding
 {
-    [BurstCompile]
-    internal struct AStarJob : IJob
+    public struct AStarOldImplementationJob : IJob
     {
         [ReadOnly] public NativeArray<Cell> grid;
 
@@ -96,18 +94,39 @@ namespace Pathfinding
 
             return 14 * xDistance + 10 * (zDistance - xDistance);
         }
-
-        private void ReversePath(int end)
+        
+        private void ReversePath(int lastIndex)
         {
-            int currentIndex = end;
+            int currentIndex = lastIndex;
 
             while (currentIndex != -1)
             {
                 finalPath.Add(grid[currentIndex]);
                 currentIndex = visitedNodes[currentIndex].cameFrom;
             }
+            
+            var newPath = new NativeList<Cell>(finalPath.Length, Allocator.TempJob);
 
-            finalPath.Reverse();
+            SimplifyPath(newPath);
+            newPath.Reverse();
+            finalPath.Clear();
+            finalPath.AddRange(newPath.AsArray());
+            newPath.Dispose();
+        }
+
+        private void SimplifyPath(NativeList<Cell> path)
+        {
+            Vector2 lastDir = Vector2.zero;
+            
+            path.Add(finalPath[0]);
+            for (int i = 1; i < finalPath.Length; i++)
+            {
+                Vector2 newDir = new Vector2(finalPath[i - 1].x - finalPath[i].x, finalPath[i - 1].y - finalPath[i].y);
+                if (newDir != lastDir) 
+                    path.Add(finalPath[i]);
+                
+                lastDir = newDir;
+            }
         }
     }
 }

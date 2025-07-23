@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -24,18 +25,79 @@ namespace NavigationGraph
 
         public NativeArray<Cell> GetGrid() => _grid;
         public int GetGridSize() => _gridSize.x * _gridSize.y;
+
         public int GetGridSizeX() => _gridSize.x;
 
         public Cell GetRandomCell() => _grid[Random.Range(0, _grid.Length)];
 
         public Cell GetCellWithWorldPosition(Vector3 worldPosition)
         {
+            var (x, y) = GetCellsMap(worldPosition);
+            
+            return _grid[x + y * _gridSize.x];
+        }
+
+        private (int x, int y) GetCellsMap(Vector3 worldPosition)
+        {
             Vector3 gridPos = worldPosition - transform.position; 
             
             int x = Mathf.Clamp(Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter), 0, _gridSize.x - 1);
             int y = Mathf.Clamp(Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter), 0, _gridSize.y - 1);
+
+            return (x, y);
+        }
+
+        public Vector3 GetNearestCellPosition(Vector3 worldPosition)
+        {
+            var (startX, startY) = GetCellsMap(worldPosition);
+
+            var visited = new bool[_grid.Length];
+            var queue = new Queue<Vector2Int>();
+            queue.Enqueue(new Vector2Int(startX, startY));
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                int x = current.x;
+                int y = current.y;
+
+                if (x < 0 || x >= _gridSize.x || y < 0 || y >= _gridSize.y) continue;
+
+                int index = x + y * _gridSize.x;
+                if (visited[index]) continue;
+
+                visited[index] = true;
+
+                if (_grid[index].isWalkable)
+                {
+                    return transform.position + new Vector3(
+                            x * _cellDiameter + _cellSize,
+                            0f,
+                            y * _cellDiameter + _cellSize
+                    );
+                }
+
+                queue.Enqueue(new Vector2Int(x + 1, y));
+                queue.Enqueue(new Vector2Int(x - 1, y));
+                queue.Enqueue(new Vector2Int(x, y + 1));
+                queue.Enqueue(new Vector2Int(x, y - 1));
+            }
+
+            return transform.position;
+        }
+
+        public bool IsInGrid(Vector3 worldPosition)
+        {
+            Vector3 gridPos = worldPosition - transform.position;
             
-            return _grid[x + y * _gridSize.x];
+            int x = Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter);
+            int y = Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter);
+            
+            if (x < 0 || x >= _gridSize.x || y < 0 || y >= _gridSize.y)
+                return false;
+
+            int gridIndex = x + y * _gridSize.x;
+            return _grid[gridIndex].isWalkable;
         }
 
         private void CreateGrid()
@@ -85,7 +147,7 @@ namespace NavigationGraph
             _cellDiameter = _cellSize * 2;
         }
 
-        private void Start()
+        private void Awake()
         {
             CreateGrid();
             ServiceLocator.Instance.RegisterService<INavigationGraph>(this);
@@ -93,7 +155,7 @@ namespace NavigationGraph
 
         private void OnDestroy()
         {
-            if (_grid.IsCreated)
+            if (_grid.IsCreated) 
                 _grid.Dispose();
         }
 

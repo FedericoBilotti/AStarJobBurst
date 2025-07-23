@@ -1,5 +1,9 @@
+using System.Collections;
+using System.Collections.Generic;
 using Pathfinding;
+using Unity.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace NavigationGraph
 {
@@ -9,23 +13,28 @@ namespace NavigationGraph
         [SerializeField] private float _rotationSpeed = 10;
         [SerializeField] private float _changeWaypointDistance = 0.5f;
 
-        [Header("Debug")] 
-        [SerializeField] private bool _showPath;
+        [Header("Debug")] [SerializeField] private bool _showPath;
 
-        private Cell[] _waypointsPath;
+        private IPathfinding _pathfinding;
+        private INavigationGraph _graph;
+        private List<Vector3> _waypointsPath;
         private Transform _transform;
+        private Coroutine _moveAgentCoroutine;
 
         private int _currentWaypoint;
 
-        public PathStatus Status { get; private set; } = PathStatus.Idle;
-        public bool HasPath => _waypointsPath is { Length: > 0 };
+        public PathStatus StatusPath { get; private set; } = PathStatus.Idle;
+        public bool HasPath => _waypointsPath != null && _waypointsPath.Count > 0 && StatusPath == PathStatus.Success;
         public float Speed { get => _speed; set => _speed = Mathf.Max(0.01f, value); }
         public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
         public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
 
         private void Start()
         {
+            _waypointsPath = new List<Vector3>(10);
             _transform = transform;
+            _pathfinding = ServiceLocator.Instance.GetService<IPathfinding>();
+            _graph = ServiceLocator.Instance.GetService<INavigationGraph>();
         }
 
         private void OnValidate()
@@ -35,51 +44,62 @@ namespace NavigationGraph
             _changeWaypointDistance = Mathf.Max(0.1f, _changeWaypointDistance);
         }
 
-        private void Update()
+        private void Update() => MapToGrid();
+
+        // The best option to move the agent is an AgentManager, and move then with jobs & burst, for performance. Because, in the future it will be added flocking.
+        private IEnumerator MoveAgent()
         {
-            MapToGrid();
-            
-            if (!HasPath) return;
-            if (_currentWaypoint >= _waypointsPath.Length)
+            while (_currentWaypoint < _waypointsPath.Count - 1)
             {
-                _currentWaypoint = 0;
-                return;
+                Vector3 distance = _waypointsPath[_currentWaypoint] - _transform.position;
+                Move(distance);
+                Rotate(distance);
+                CheckWaypoints(distance);
+                yield return null;
             }
-            
-            Vector3 distance = _waypointsPath[_currentWaypoint].position - _transform.position;
-            Move(distance);
-            Rotate(distance);
-            CheckWaypoints(distance);
-        }
 
-        private void MapToGrid()
-        {
-            // If the agent is not on the grid, move it to the closest grid position
-        }
-
-        public void RequestPath(Vector3 startPosition, Vector3 endPosition)
-        {
-            if (Status == PathStatus.Requested) return;
-            
             ClearPath();
-            
-            var navigationGraph = ServiceLocator.Instance.GetService<INavigationGraph>();
-            
-            Cell startCell = navigationGraph.GetCellWithWorldPosition(startPosition);
-            Cell endCell = navigationGraph.GetCellWithWorldPosition(endPosition);
-            ServiceLocator.Instance.GetService<IPathfinding>().RequestPath(this, startCell, endCell);
+            StatusPath = PathStatus.Idle;
         }
 
-        public void SetPath(Cell[] path)
+        public bool RequestPath(Vector3 startPosition, Vector3 endPosition)
         {
-            if (path == null)
+            if (StatusPath == PathStatus.Requested) return false;
+            if (!IsAgentInGrid(_graph, _transform.position))
             {
-                Status = PathStatus.Failed;
+                StatusPath = PathStatus.Failed;
+                return false;
+            }
+
+            StatusPath = PathStatus.Requested;
+            ClearPath();
+
+            Cell startCell = _graph.GetCellWithWorldPosition(startPosition);
+            Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
+            bool isPathValid = _pathfinding.RequestPath(this, startCell, endCell);
+
+            if (isPathValid) return true;
+
+            StatusPath = PathStatus.Failed;
+            return false;
+        }
+
+        public void SetPath(NativeList<Cell> path)
+        {
+            if (!path.IsCreated || path.Length == 0)
+            {
+                StatusPath = PathStatus.Failed;
                 return;
             }
 
-            _waypointsPath = path;
-            Status = PathStatus.Success;
+            foreach (var cell in path)
+            {
+                _waypointsPath.Add(cell.position);
+            }
+
+            StatusPath = PathStatus.Success;
+            if (_moveAgentCoroutine != null) StopCoroutine(_moveAgentCoroutine);
+            _moveAgentCoroutine = StartCoroutine(MoveAgent());
         }
 
         private void Move(Vector3 distance)
@@ -95,20 +115,35 @@ namespace NavigationGraph
 
         private void CheckWaypoints(Vector3 distance)
         {
-            if (distance.magnitude > _changeWaypointDistance * _changeWaypointDistance) return;
+            if (distance.sqrMagnitude > _changeWaypointDistance * _changeWaypointDistance) return;
+            if (++_currentWaypoint < _waypointsPath.Count) return;
 
-            _currentWaypoint++;
-            if (_currentWaypoint++ >= _waypointsPath.Length)
-            {
-                ClearPath();
-            }
+            ClearPath();
+            StatusPath = PathStatus.Idle;
         }
 
         private void ClearPath()
         {
-            _waypointsPath = null;
-            // Status = PathStatus.Idle; ¿?
+            _currentWaypoint = 0;
+            _waypointsPath.Clear();
         }
+
+        private void MapToGrid()
+        {
+            // If the agent is not on the grid, move it to the closest grid position
+            if (IsAgentInGrid(_graph, transform.position)) return;
+
+            Vector3 nearestCellPosition = MapToNearestCellPosition(_graph, transform.position);
+            transform.position = nearestCellPosition;
+        }
+
+        private static Vector3 MapToNearestCellPosition(INavigationGraph graph, Vector3 agentPosition)
+        {
+            Vector3 nearestPosition = graph.GetNearestCellPosition(agentPosition);
+            return nearestPosition;
+        }
+
+        private static bool IsAgentInGrid(INavigationGraph graph, Vector3 position) => graph.IsInGrid(position);
 
         public enum PathStatus
         {
@@ -121,14 +156,14 @@ namespace NavigationGraph
         private void OnDrawGizmos()
         {
             if (!_showPath) return;
-            if (_waypointsPath == null || _waypointsPath.Length == 0) return;
+            if (_waypointsPath == null || _waypointsPath.Count == 0) return;
 
             Gizmos.color = Color.black;
-            
-            for (int i = _currentWaypoint; i < _waypointsPath.Length; i++)
+
+            for (int i = _currentWaypoint; i < _waypointsPath.Count; i++)
             {
-                Gizmos.DrawLine(i == _currentWaypoint ? transform.position : _waypointsPath[i - 1].position, _waypointsPath[i].position);
-                Gizmos.DrawCube(_waypointsPath[i].position, Vector3.one * 0.35f);
+                Gizmos.DrawLine(i == _currentWaypoint ? transform.position : _waypointsPath[i - 1], _waypointsPath[i]);
+                Gizmos.DrawCube(_waypointsPath[i], Vector3.one * 0.35f);
             }
         }
     }

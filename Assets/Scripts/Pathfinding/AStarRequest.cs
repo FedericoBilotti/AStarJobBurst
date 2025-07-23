@@ -1,4 +1,6 @@
 using NavigationGraph;
+using Pathfinding.RequesterStrategy;
+using Pathfinding.Strategy;
 using UnityEngine;
 
 namespace Pathfinding
@@ -12,6 +14,8 @@ namespace Pathfinding
 
         private void Awake()
         {
+            ServiceLocator.Instance.RegisterService<IPathfinding>(this);
+            
             // Should be injected
             var navigationGraph = GetComponent<INavigationGraph>();
             _singlePathRequest = new OnePathRequester(navigationGraph);
@@ -19,23 +23,19 @@ namespace Pathfinding
             _schedulePathRequest = new SchedulePathRequest(navigationGraph);
         }
 
-        private void Start() => ServiceLocator.Instance.RegisterService<IPathfinding>(this);
-
-        public void RequestPath(IAgent agent, Cell start, Cell end)
+        public bool RequestPath(IAgent agent, Cell start, Cell end)
         {
             switch (_requestType)
             {
                 case PathRequestType.Single:
-                    _singlePathRequest.RequestPath(agent, start, end);
-                    break;
+                    return _singlePathRequest.RequestPath(agent, start, end);
 
                 case PathRequestType.Multiple:
-                    _multiPathRequest.RequestPath(agent, start, end);
-                    break;
+                    return _multiPathRequest.RequestPath(agent, start, end);
 
+                case PathRequestType.Schedule:
                 default:
-                    _schedulePathRequest.RequestPath(agent, start, end);
-                    break;
+                    return _schedulePathRequest.RequestPath(agent, start, end);
             }
         }
 
@@ -51,6 +51,7 @@ namespace Pathfinding
                     _multiPathRequest.FinishPath();
                     break;
 
+                case PathRequestType.Schedule:
                 default:
                     _schedulePathRequest.FinishPath();
                     break;
