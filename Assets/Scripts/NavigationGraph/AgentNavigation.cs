@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Pathfinding;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace NavigationGraph
 {
@@ -59,23 +60,10 @@ namespace NavigationGraph
             CheckWaypoints(distance);
         }
 
-        private void MapToGrid()
-        {
-            // If the agent is not on the grid, move it to the closest grid position
-            if (IsAgentInGrid()) return;
-
-            MapToNearestCellPosition();
-        }
-
-        private void MapToNearestCellPosition() { }
-
-        private bool IsAgentInGrid() => _graph.IsInGrid(_transform.position);
-
         public bool RequestPath(Vector3 startPosition, Vector3 endPosition)
         {
             if (StatusPath == PathStatus.Requested) return false;
-            
-            if (!IsAgentInGrid())
+            if (!IsAgentInGrid(_graph, _transform.position))
             {
                 StatusPath = PathStatus.Failed;
                 return false;
@@ -86,27 +74,21 @@ namespace NavigationGraph
 
             Cell startCell = _graph.GetCellWithWorldPosition(startPosition);
             Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
-            var isPathValid = _pathfinding.RequestPath(this, startCell, endCell);
+            bool isPathValid = _pathfinding.RequestPath(this, startCell, endCell);
 
-            if (!isPathValid)
-            {
-                StatusPath = PathStatus.Failed;
-                return false;
-            }
+            if (isPathValid) return true;
 
-            return true;
+            StatusPath = PathStatus.Failed;
+            return false;
         }
 
         public void SetPath(NativeList<Cell> path)
         {
             if (!path.IsCreated || path.Length == 0)
             {
-                Debug.LogWarning("Path is empty");
                 StatusPath = PathStatus.Failed;
                 return;
             }
-
-            Debug.LogWarning("Adding Path");
 
             foreach (var cell in path)
             {
@@ -142,6 +124,23 @@ namespace NavigationGraph
             _currentWaypoint = 0;
             _waypointsPath.Clear();
         }
+        
+        private void MapToGrid()
+        {
+            // If the agent is not on the grid, move it to the closest grid position
+            if (IsAgentInGrid(_graph, transform.position)) return;
+
+            Vector3 nearestCellPosition = MapToNearestCellPosition(_graph, transform.position);
+            transform.position = nearestCellPosition;
+        }
+
+        private static Vector3 MapToNearestCellPosition(INavigationGraph graph, Vector3 agentPosition)
+        {
+            Vector3 nearestPosition = graph.GetNearestCellPosition(agentPosition);
+            return nearestPosition;
+        }
+
+        private static bool IsAgentInGrid(INavigationGraph graph, Vector3 position) => graph.IsInGrid(position);
 
         public enum PathStatus
         {

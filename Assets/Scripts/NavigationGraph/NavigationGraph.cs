@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -31,12 +32,58 @@ namespace NavigationGraph
 
         public Cell GetCellWithWorldPosition(Vector3 worldPosition)
         {
+            var (x, y) = GetCellsMap(worldPosition);
+            
+            return _grid[x + y * _gridSize.x];
+        }
+
+        private (int x, int y) GetCellsMap(Vector3 worldPosition)
+        {
             Vector3 gridPos = worldPosition - transform.position; 
             
             int x = Mathf.Clamp(Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter), 0, _gridSize.x - 1);
             int y = Mathf.Clamp(Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter), 0, _gridSize.y - 1);
-            
-            return _grid[x + y * _gridSize.x];
+
+            return (x, y);
+        }
+
+        public Vector3 GetNearestCellPosition(Vector3 worldPosition)
+        {
+            var (startX, startY) = GetCellsMap(worldPosition);
+
+            var visited = new bool[_grid.Length];
+            var queue = new Queue<Vector2Int>();
+            queue.Enqueue(new Vector2Int(startX, startY));
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                int x = current.x;
+                int y = current.y;
+
+                if (x < 0 || x >= _gridSize.x || y < 0 || y >= _gridSize.y) continue;
+
+                int index = x + y * _gridSize.x;
+                if (visited[index]) continue;
+
+                visited[index] = true;
+
+                if (_grid[index].isWalkable)
+                {
+                    return transform.position + new Vector3(
+                            x * _cellDiameter + _cellSize,
+                            0f,
+                            y * _cellDiameter + _cellSize
+                    );
+                }
+
+                queue.Enqueue(new Vector2Int(x + 1, y));
+                queue.Enqueue(new Vector2Int(x - 1, y));
+                queue.Enqueue(new Vector2Int(x, y + 1));
+                queue.Enqueue(new Vector2Int(x, y - 1));
+            }
+
+            return transform.position;
         }
 
         public bool IsInGrid(Vector3 worldPosition)
