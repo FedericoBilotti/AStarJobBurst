@@ -32,9 +32,9 @@ namespace Pathfinding.Strategy
             _path = new NativeList<Cell>(100, Allocator.Persistent);
         }
         
-        public void RequestPath(IAgent agent, Cell start, Cell end)
+        public bool RequestPath(IAgent agent, Cell start, Cell end)
         {
-            if (!end.isWalkable) return;
+            if (!end.isWalkable) return false;
 
             _openList.Clear();
             _visitedNodes.Clear();
@@ -54,6 +54,8 @@ namespace Pathfinding.Strategy
 
             jobHandle.Complete();
             agent.SetPath(_path);
+
+            return true;
         }
 
         public void FinishPath() { }

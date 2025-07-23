@@ -23,21 +23,21 @@ namespace Pathfinding
             _schedulePathRequest = new SchedulePathRequest(navigationGraph);
         }
 
-        public void RequestPath(IAgent agent, Cell start, Cell end)
+        public bool RequestPath(IAgent agent, Cell start, Cell end)
         {
             switch (_requestType)
             {
                 case PathRequestType.Single:
-                    _singlePathRequest.RequestPath(agent, start, end);
+                    return _singlePathRequest.RequestPath(agent, start, end);
                     break;
 
                 case PathRequestType.Multiple:
-                    _multiPathRequest.RequestPath(agent, start, end);
+                    return _multiPathRequest.RequestPath(agent, start, end);
                     break;
 
                 case PathRequestType.Schedule:
                 default:
-                    _schedulePathRequest.RequestPath(agent, start, end);
+                    return _schedulePathRequest.RequestPath(agent, start, end);
                     break;
             }
         }

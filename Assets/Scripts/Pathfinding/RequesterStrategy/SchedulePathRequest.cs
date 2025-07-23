@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NavigationGraph;
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine;
 using UnityEngine.Pool;
 using Utilities;
 
@@ -48,9 +49,9 @@ namespace Pathfinding.RequesterStrategy
             }, defaultCapacity: CAPACITY, maxSize: MAX_SIZE);
         }
         
-        public void RequestPath(IAgent agent, Cell start, Cell end)
+        public bool RequestPath(IAgent agent, Cell start, Cell end)
         {
-            if (!end.isWalkable) return;
+            if (!end.isWalkable) return false;
 
             PathRequest pathRequest = _pathRequestPool.Get();
 
@@ -76,6 +77,8 @@ namespace Pathfinding.RequesterStrategy
             pathRequest.agent = agent;
             pathRequest.handle = postAStarJob;
             _requests.Add(pathRequest);
+
+            return true;
         }
 
         public void FinishPath()

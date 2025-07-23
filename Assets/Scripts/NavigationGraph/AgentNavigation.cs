@@ -11,8 +11,7 @@ namespace NavigationGraph
         [SerializeField] private float _rotationSpeed = 10;
         [SerializeField] private float _changeWaypointDistance = 0.5f;
 
-        [Header("Debug")] 
-        [SerializeField] private bool _showPath;
+        [Header("Debug")] [SerializeField] private bool _showPath;
 
         private IPathfinding _pathfinding;
         private INavigationGraph _graph;
@@ -21,8 +20,8 @@ namespace NavigationGraph
 
         private int _currentWaypoint;
 
-        public PathStatus Status { get; private set; } = PathStatus.Idle;
-        public bool HasPath => _waypointsPath != null && _waypointsPath.Count > 0 && Status == PathStatus.Success;
+        public PathStatus StatusPath { get; private set; } = PathStatus.Idle;
+        public bool HasPath => _waypointsPath != null && _waypointsPath.Count > 0 && StatusPath == PathStatus.Success;
         public float Speed { get => _speed; set => _speed = Mathf.Max(0.01f, value); }
         public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
         public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
@@ -45,15 +44,15 @@ namespace NavigationGraph
         private void Update()
         {
             MapToGrid();
-            
+
             if (!HasPath) return;
             if (_currentWaypoint >= _waypointsPath.Count)
             {
                 ClearPath();
-                Status = PathStatus.Idle;
+                StatusPath = PathStatus.Idle;
                 return;
             }
-            
+
             Vector3 distance = _waypointsPath[_currentWaypoint] - _transform.position;
             Move(distance);
             Rotate(distance);
@@ -64,48 +63,57 @@ namespace NavigationGraph
         {
             // If the agent is not on the grid, move it to the closest grid position
             if (IsAgentInGrid()) return;
-            
+
             MapToNearestCellPosition();
         }
 
-        private void MapToNearestCellPosition()
-        {
-            
-        }
+        private void MapToNearestCellPosition() { }
 
         private bool IsAgentInGrid() => _graph.IsInGrid(_transform.position);
 
-        public void RequestPath(Vector3 startPosition, Vector3 endPosition)
+        public bool RequestPath(Vector3 startPosition, Vector3 endPosition)
         {
-            if (Status == PathStatus.Requested) return;
+            if (StatusPath == PathStatus.Requested) return false;
+            
             if (!IsAgentInGrid())
             {
-                Debug.LogWarning("Agent is not in the grid");
-                return;
+                StatusPath = PathStatus.Failed;
+                return false;
             }
-            
-            Status = PathStatus.Requested;
+
+            StatusPath = PathStatus.Requested;
             ClearPath();
-            
+
             Cell startCell = _graph.GetCellWithWorldPosition(startPosition);
             Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
-            _pathfinding.RequestPath(this, startCell, endCell);
+            var isPathValid = _pathfinding.RequestPath(this, startCell, endCell);
+
+            if (!isPathValid)
+            {
+                StatusPath = PathStatus.Failed;
+                return false;
+            }
+
+            return true;
         }
 
         public void SetPath(NativeList<Cell> path)
         {
             if (!path.IsCreated || path.Length == 0)
             {
-                Status = PathStatus.Failed;
+                Debug.LogWarning("Path is empty");
+                StatusPath = PathStatus.Failed;
                 return;
             }
+
+            Debug.LogWarning("Adding Path");
 
             foreach (var cell in path)
             {
                 _waypointsPath.Add(cell.position);
             }
 
-            Status = PathStatus.Success;
+            StatusPath = PathStatus.Success;
         }
 
         private void Move(Vector3 distance)
@@ -124,9 +132,9 @@ namespace NavigationGraph
             if (distance.magnitude > _changeWaypointDistance * _changeWaypointDistance) return;
 
             if (++_currentWaypoint < _waypointsPath.Count) return;
-            
+
             ClearPath();
-            Status = PathStatus.Idle;
+            StatusPath = PathStatus.Idle;
         }
 
         private void ClearPath()
@@ -149,7 +157,7 @@ namespace NavigationGraph
             if (_waypointsPath == null || _waypointsPath.Count == 0) return;
 
             Gizmos.color = Color.black;
-            
+
             for (int i = _currentWaypoint; i < _waypointsPath.Count; i++)
             {
                 Gizmos.DrawLine(i == _currentWaypoint ? transform.position : _waypointsPath[i - 1], _waypointsPath[i]);
