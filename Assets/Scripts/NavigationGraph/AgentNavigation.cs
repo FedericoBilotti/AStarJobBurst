@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Pathfinding;
 using Unity.Collections;
@@ -18,6 +19,7 @@ namespace NavigationGraph
         private INavigationGraph _graph;
         private List<Vector3> _waypointsPath;
         private Transform _transform;
+        private Coroutine _moveAgentCoroutine;
 
         private int _currentWaypoint;
 
@@ -42,22 +44,22 @@ namespace NavigationGraph
             _changeWaypointDistance = Mathf.Max(0.1f, _changeWaypointDistance);
         }
 
-        private void Update()
-        {
-            MapToGrid();
+        private void Update() => MapToGrid();
 
-            if (!HasPath) return;
-            if (_currentWaypoint >= _waypointsPath.Count)
+        // The best option to move the agent is an AgentManager, and move then with jobs & burst, for performance. Because, in the future it will be added flocking.
+        private IEnumerator MoveAgent()
+        {
+            while (_currentWaypoint < _waypointsPath.Count - 1)
             {
-                ClearPath();
-                StatusPath = PathStatus.Idle;
-                return;
+                Vector3 distance = _waypointsPath[_currentWaypoint] - _transform.position;
+                Move(distance);
+                Rotate(distance);
+                CheckWaypoints(distance);
+                yield return null;
             }
 
-            Vector3 distance = _waypointsPath[_currentWaypoint] - _transform.position;
-            Move(distance);
-            Rotate(distance);
-            CheckWaypoints(distance);
+            ClearPath();
+            StatusPath = PathStatus.Idle;
         }
 
         public bool RequestPath(Vector3 startPosition, Vector3 endPosition)
@@ -96,6 +98,8 @@ namespace NavigationGraph
             }
 
             StatusPath = PathStatus.Success;
+            if (_moveAgentCoroutine != null) StopCoroutine(_moveAgentCoroutine);
+            _moveAgentCoroutine = StartCoroutine(MoveAgent());
         }
 
         private void Move(Vector3 distance)
@@ -111,8 +115,7 @@ namespace NavigationGraph
 
         private void CheckWaypoints(Vector3 distance)
         {
-            if (distance.magnitude > _changeWaypointDistance * _changeWaypointDistance) return;
-
+            if (distance.sqrMagnitude > _changeWaypointDistance * _changeWaypointDistance) return;
             if (++_currentWaypoint < _waypointsPath.Count) return;
 
             ClearPath();
@@ -124,7 +127,7 @@ namespace NavigationGraph
             _currentWaypoint = 0;
             _waypointsPath.Clear();
         }
-        
+
         private void MapToGrid()
         {
             // If the agent is not on the grid, move it to the closest grid position

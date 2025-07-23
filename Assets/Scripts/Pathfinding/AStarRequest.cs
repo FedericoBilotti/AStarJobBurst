@@ -29,16 +29,13 @@ namespace Pathfinding
             {
                 case PathRequestType.Single:
                     return _singlePathRequest.RequestPath(agent, start, end);
-                    break;
 
                 case PathRequestType.Multiple:
                     return _multiPathRequest.RequestPath(agent, start, end);
-                    break;
 
                 case PathRequestType.Schedule:
                 default:
                     return _schedulePathRequest.RequestPath(agent, start, end);
-                    break;
             }
         }
 
