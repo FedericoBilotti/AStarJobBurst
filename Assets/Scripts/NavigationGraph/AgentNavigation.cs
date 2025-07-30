@@ -49,7 +49,7 @@ namespace NavigationGraph
         // The best option to move the agent is an AgentManager, and move then with jobs & burst, for performance. Because, in the future it will be added flocking.
         private IEnumerator MoveAgent()
         {
-            while (_currentWaypoint < _waypointsPath.Count - 1)
+            while (_currentWaypoint < _waypointsPath.Count)
             {
                 Vector3 distance = _waypointsPath[_currentWaypoint] - _transform.position;
                 Move(distance);

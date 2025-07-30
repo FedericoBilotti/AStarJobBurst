@@ -2,6 +2,7 @@ using NavigationGraph;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 using Utilities;
 
@@ -102,13 +103,15 @@ namespace Pathfinding
         [ReadOnly] public NativeArray<Cell> grid;
         [ReadOnly] public NativeHashMap<int, PathCellData> visitedNodes;
         [ReadOnly] public int endIndex;
+        [ReadOnly] public int gridSizeX;
+
         public NativeList<Cell> finalPath;
-        
+
         public void Execute()
         {
             ReversePath(endIndex);
         }
-        
+
         private void ReversePath(int lastIndex)
         {
             int currentIndex = lastIndex;
@@ -118,29 +121,77 @@ namespace Pathfinding
                 finalPath.Add(grid[currentIndex]);
                 currentIndex = visitedNodes[currentIndex].cameFrom;
             }
-            
-            var newPath = new NativeList<Cell>(finalPath.Length, Allocator.TempJob);
 
-            SimplifyPath(newPath);
-            newPath.Reverse();
+            var simplified = new NativeList<Cell>(finalPath.Length, Allocator.Temp);
+
+            SimplifyPath(simplified);
+
+            simplified.Reverse();
             finalPath.Clear();
-            finalPath.AddRange( newPath.AsArray());
-            newPath.Dispose();
+            finalPath.AddRange(simplified.AsArray());
+            simplified.Dispose();
         }
 
-        private void SimplifyPath(NativeList<Cell> path)
+        private void SimplifyPath(NativeList<Cell> simplified)
         {
-            Vector2 lastDir = Vector2.zero;
-            
-            path.Add(finalPath[0]);
+            int j = 0;
+            simplified.Add(finalPath[0]);
+
             for (int i = 1; i < finalPath.Length; i++)
             {
-                Vector2 newDir = new Vector2(finalPath[i - 1].x - finalPath[i].x, finalPath[i - 1].y - finalPath[i].y);
-                if (newDir != lastDir) 
-                    path.Add(finalPath[i]);
-                
-                lastDir = newDir;
+                if (!HasLineOfSight(finalPath[j], finalPath[i]))
+                {
+                    simplified.Add(finalPath[i - 1]);
+                    j = i - 1;
+                }
             }
+            
+            simplified.Add(finalPath[^1]);
+        }
+
+        // Bresenham algorithm
+        private bool HasLineOfSight(Cell startCell, Cell endCell)
+        {
+            int startX = startCell.x;
+            int startY = startCell.y;
+            int endX = endCell.x;
+            int endY = endCell.y;
+
+            int deltaX = Mathf.Abs(endX - startX);
+            int deltaY = Mathf.Abs(endY - startY);
+
+            int stepX = startX < endX ? 1 : -1;
+            int stepY = startY < endY ? 1 : -1;
+
+            int error = deltaX - deltaY;
+
+            while (startX != endX || startY != endY)
+            {
+                int index = GetIndex(startX, startY);
+                
+                if (!grid[index].isWalkable) return false;
+
+                int doubleError = 2 * error;
+
+                if (doubleError > -deltaY)
+                {
+                    error -= deltaY;
+                    startX += stepX;
+                }
+
+                if (doubleError < deltaX)
+                {
+                    error += deltaX;
+                    startY += stepY;
+                }
+            }
+
+            return true;
+        }
+
+        private int GetIndex(int x, int y)
+        {
+            return x + y * gridSizeX;
         }
     }
 }

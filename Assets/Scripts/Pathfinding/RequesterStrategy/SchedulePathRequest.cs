@@ -71,7 +71,8 @@ namespace Pathfinding.RequesterStrategy
                 grid = _navigationGraph.GetGrid(),
                 visitedNodes = pathRequest.visitedNodes,
                 endIndex = end.gridIndex,
-                finalPath = pathRequest.path
+                finalPath = pathRequest.path,
+                gridSizeX = _navigationGraph.GetGridSizeX()
             }.Schedule(aStarJob);
 
             pathRequest.agent = agent;
