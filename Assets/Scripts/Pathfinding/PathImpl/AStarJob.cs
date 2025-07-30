@@ -100,53 +100,65 @@ namespace Pathfinding
     [BurstCompile]
     internal struct PostProcessAStarJob : IJob
     {
-        [ReadOnly] public NativeArray<Cell> grid;
-        [ReadOnly] public NativeHashMap<int, PathCellData> visitedNodes;
-        [ReadOnly] public int endIndex;
-        [ReadOnly] public int gridSizeX;
+        [ReadOnly] private NativeArray<Cell> _grid;
+        [ReadOnly] private NativeHashMap<int, PathCellData> _visitedNodes;
+        [ReadOnly] private readonly int _endIndex;
+        [ReadOnly] private readonly int _gridSizeX;
 
-        public NativeList<Cell> finalPath;
+        private NativeList<Cell> _finalPath;
+        private NativeList<Cell> _simplified;
+
+        public PostProcessAStarJob(NativeArray<Cell> grid, NativeHashMap<int, PathCellData> visitedNodes, int endIndex, int gridSizeX, NativeList<Cell> finalPath, NativeList<Cell> simplified) : this()
+        {
+            _grid = grid;
+            _visitedNodes = visitedNodes;
+            _endIndex = endIndex;
+            _gridSizeX = gridSizeX;
+            _finalPath = finalPath;
+            _simplified = simplified;
+        }
 
         public void Execute()
         {
-            ReversePath(endIndex);
+            AddFinalPath(_endIndex);
+            SimplifyPath();
+            ReversePath();
         }
 
-        private void ReversePath(int lastIndex)
+        private void AddFinalPath(int lastIndex)
         {
             int currentIndex = lastIndex;
 
             while (currentIndex != -1)
             {
-                finalPath.Add(grid[currentIndex]);
-                currentIndex = visitedNodes[currentIndex].cameFrom;
+                _finalPath.Add(_grid[currentIndex]);
+                currentIndex = _visitedNodes[currentIndex].cameFrom;
             }
-
-            var simplified = new NativeList<Cell>(finalPath.Length, Allocator.Temp);
-
-            SimplifyPath(simplified);
-
-            simplified.Reverse();
-            finalPath.Clear();
-            finalPath.AddRange(simplified.AsArray());
-            simplified.Dispose();
         }
 
-        private void SimplifyPath(NativeList<Cell> simplified)
+        private void ReversePath()
         {
-            int j = 0;
-            simplified.Add(finalPath[0]);
+            _finalPath.Clear();
+            _finalPath.AddRange(_simplified.AsArray());
+            _finalPath.Reverse();
+        }
 
-            for (int i = 1; i < finalPath.Length; i++)
+        private void SimplifyPath()
+        {
+            // Avoid simplifying the path if it has less than 2 cells
+            if (_finalPath.Length <= 2) 
+                return;
+
+            int j = 0;
+            _simplified.Add(_finalPath[0]);
+
+            for (int i = 1; i < _finalPath.Length; i++)
             {
-                if (!HasLineOfSight(finalPath[j], finalPath[i]))
-                {
-                    simplified.Add(finalPath[i - 1]);
-                    j = i - 1;
-                }
+                if (HasLineOfSight(_finalPath[j], _finalPath[i])) continue;
+
+                _simplified.Add(_finalPath[i - 1]);
+                j = i - 1;
             }
-            
-            simplified.Add(finalPath[^1]);
         }
 
         // Bresenham algorithm
@@ -168,8 +180,8 @@ namespace Pathfinding
             while (startX != endX || startY != endY)
             {
                 int index = GetIndex(startX, startY);
-                
-                if (!grid[index].isWalkable) return false;
+
+                if (!_grid[index].isWalkable) return false;
 
                 int doubleError = 2 * error;
 
@@ -191,7 +203,7 @@ namespace Pathfinding
 
         private int GetIndex(int x, int y)
         {
-            return x + y * gridSizeX;
+            return x + y * _gridSizeX;
         }
     }
 }
