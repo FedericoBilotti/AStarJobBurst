@@ -1,3 +1,4 @@
+using Agents;
 using NavigationGraph;
 using Pathfinding.PathImplementation;
 using Unity.Jobs;

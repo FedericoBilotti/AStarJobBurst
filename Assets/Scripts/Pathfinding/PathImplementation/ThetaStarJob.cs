@@ -49,10 +49,10 @@ namespace Pathfinding.PathImplementation
         // Bresenham algorithm
         private bool HasLineOfSight(Cell startCell, Cell endCell)
         {
-            int startX = startCell.x;
-            int startY = startCell.y;
-            int endX = endCell.x;
-            int endY = endCell.y;
+            int startX = startCell.gridX;
+            int startY = startCell.gridZ;
+            int endX = endCell.gridX;
+            int endY = endCell.gridZ;
 
             int deltaX = Mathf.Abs(endX - startX);
             int deltaY = Mathf.Abs(endY - startY);

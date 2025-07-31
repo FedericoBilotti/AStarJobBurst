@@ -71,8 +71,8 @@ namespace Pathfinding.PathImplementation
                 {
                     if (offsetX == 0 && offsetZ == 0) continue;
 
-                    int gridX = cell.x + offsetX;
-                    int gridZ = cell.y + offsetZ;
+                    int gridX = cell.gridX + offsetX;
+                    int gridZ = cell.gridZ + offsetZ;
 
                     if (gridX >= 0 && gridX < gridSizeX && gridZ >= 0 && gridZ < grid.Length / gridSizeX)
                     {
@@ -87,8 +87,8 @@ namespace Pathfinding.PathImplementation
             Cell cellA = grid[indexCellA];
             Cell cellB = grid[indexCellB];
 
-            int xDistance = Mathf.Abs(cellA.x - cellB.x);
-            int zDistance = Mathf.Abs(cellA.y - cellB.y);
+            int xDistance = Mathf.Abs(cellA.gridX - cellB.gridX);
+            int zDistance = Mathf.Abs(cellA.gridZ - cellB.gridZ);
 
             if (xDistance > zDistance) return 14 * zDistance + 10 * (xDistance - zDistance);
 

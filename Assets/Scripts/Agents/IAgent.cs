@@ -1,7 +1,8 @@
+using NavigationGraph;
 using Unity.Collections;
 using UnityEngine;
 
-namespace NavigationGraph
+namespace Agents
 {
     public interface IAgent
     {

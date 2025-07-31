@@ -1,57 +1,65 @@
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
-using Random = UnityEngine.Random;
-using Vector3 = UnityEngine.Vector3;
 
 namespace NavigationGraph
 {
-    public class NavigationGraph : MonoBehaviour, INavigationGraph
+    public abstract class NavigationGraph : INavigationGraph
     {
-        [SerializeField] private bool _showGizmos;
-        [SerializeField] private bool _showBox;
-        [SerializeField] private bool _showLines;
-        [SerializeField] private bool _showCells;
-        [SerializeField] private float _cellSize;
-        [SerializeField] private Vector2Int _gridSize;
-
-        [Header("Check Wall")] 
-        [SerializeField] private float _maxDistance = 100;
-        [SerializeField] private LayerMask _notWalkableMask = 6;
-
+        private readonly LayerMask _notWalkableMask;    
+        private readonly float _maxDistance;
+        private float _cellSize;
         private float _cellDiameter;
+        protected Vector2Int gridSize;
+        protected NativeArray<Cell> grid;
+        
+        private readonly Transform _transform;
 
-        private NativeArray<Cell> _grid;
+        public NavigationGraphSystem.NavigationGraphType GraphType { get; protected set; }
 
-        public NativeArray<Cell> GetGrid() => _grid;
-        public int GetGridSize() => _gridSize.x * _gridSize.y;
-
-        public int GetGridSizeX() => _gridSize.x;
-
-        public Cell GetRandomCell() => _grid[Random.Range(0, _grid.Length)];
-
-        public Cell GetCellWithWorldPosition(Vector3 worldPosition)
+        protected NavigationGraph(float cellSize, float maxDistance, Vector2Int gridSize, LayerMask notWalkableMask, Transform transform)
         {
-            var (x, y) = GetCellsMap(worldPosition);
+            _cellSize = cellSize;
+            this.gridSize = gridSize;
             
-            return _grid[x + y * _gridSize.x];
+            _maxDistance = maxDistance;
+            _notWalkableMask = notWalkableMask;
+            
+            _transform = transform;
         }
 
-        private (int x, int y) GetCellsMap(Vector3 worldPosition)
-        {
-            Vector3 gridPos = worldPosition - transform.position; 
-            
-            int x = Mathf.Clamp(Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter), 0, _gridSize.x - 1);
-            int y = Mathf.Clamp(Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter), 0, _gridSize.y - 1);
+        protected abstract void CreateGrid();
 
-            return (x, y);
+        public NativeArray<Cell> GetGrid() => grid;
+        public Cell GetRandomCell() => grid[Random.Range(0, grid.Length)];
+        public int GetGridSize() => gridSize.x * gridSize.y;
+        public int GetGridSizeX() => gridSize.x;
+
+        public virtual Cell GetCellWithWorldPosition(Vector3 worldPosition)
+        {
+            var (x, y) = GetCellsMap(worldPosition);
+
+            return grid[x + y * gridSize.x];
+        }
+
+        public virtual bool IsInGrid(Vector3 worldPosition)
+        {
+            Vector3 gridPos = worldPosition - _transform.position;
+
+            int x = Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter);
+            int y = Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter);
+
+            if (x < 0 || x >= gridSize.x || y < 0 || y >= gridSize.y) return false;
+
+            int gridIndex = x + y * gridSize.x;
+            return grid[gridIndex].isWalkable;
         }
 
         public Vector3 GetNearestCellPosition(Vector3 worldPosition)
         {
             var (startX, startY) = GetCellsMap(worldPosition);
 
-            var visited = new bool[_grid.Length];
+            var visited = new bool[grid.Length];
             var queue = new Queue<Vector2Int>();
             queue.Enqueue(new Vector2Int(startX, startY));
 
@@ -61,20 +69,16 @@ namespace NavigationGraph
                 int x = current.x;
                 int y = current.y;
 
-                if (x < 0 || x >= _gridSize.x || y < 0 || y >= _gridSize.y) continue;
+                if (x < 0 || x >= gridSize.x || y < 0 || y >= gridSize.y) continue;
 
-                int index = x + y * _gridSize.x;
+                int index = x + y * gridSize.x;
                 if (visited[index]) continue;
 
                 visited[index] = true;
 
-                if (_grid[index].isWalkable)
+                if (grid[index].isWalkable)
                 {
-                    return transform.position + new Vector3(
-                            x * _cellDiameter + _cellSize,
-                            0f,
-                            y * _cellDiameter + _cellSize
-                    );
+                    return _transform.position + new Vector3(x * _cellDiameter + _cellSize, 0f, y * _cellDiameter + _cellSize);
                 }
 
                 queue.Enqueue(new Vector2Int(x + 1, y));
@@ -83,130 +87,42 @@ namespace NavigationGraph
                 queue.Enqueue(new Vector2Int(x, y - 1));
             }
 
-            return transform.position;
+            return _transform.position;
         }
 
-        public bool IsInGrid(Vector3 worldPosition)
+        protected bool IsCellWalkable(Vector3 cellPosition)
         {
-            Vector3 gridPos = worldPosition - transform.position;
-            
-            int x = Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter);
-            int y = Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter);
-            
-            if (x < 0 || x >= _gridSize.x || y < 0 || y >= _gridSize.y)
-                return false;
-
-            int gridIndex = x + y * _gridSize.x;
-            return _grid[gridIndex].isWalkable;
+            return !Physics.SphereCast(cellPosition + Vector3.up * _maxDistance, _cellSize, Vector3.down, out _, _maxDistance, _notWalkableMask);
         }
 
-        private void CreateGrid()
+        protected Vector3 GetCellPosition(int gridX, int gridY)
         {
-            if (_grid.IsCreated)
-            {
-                _grid.Dispose();
-            }
-            
-            _grid = new NativeArray<Cell>(_gridSize.x * _gridSize.y, Allocator.Persistent);
-            
-            for (int i = 0; i < _grid.Length; i++)
-            {
-                int x = i % _gridSize.x;
-                int y = i / _gridSize.x;
-
-                Vector3 cellPosition = GetCellPosition(x, y);
-
-                bool isWalkable = IsCellWalkable(cellPosition);
-                
-                _grid[i] = new Cell
-                {
-                    position = cellPosition,
-                    gridIndex = i,
-                    x = x,
-                    y = y,
-                    isWalkable = isWalkable,
-                };
-            }
+            return _transform.position + Vector3.right * (gridX * _cellDiameter + _cellSize) + Vector3.forward * (gridY * _cellDiameter + _cellSize);
         }
 
-        private Vector3 GetCellPosition(int gridX, int gridY)
+        private (int x, int y) GetCellsMap(Vector3 worldPosition)
         {
-            return transform.position + Vector3.right * (gridX * _cellDiameter + _cellSize) + Vector3.forward * (gridY * _cellDiameter + _cellSize);
+            Vector3 gridPos = worldPosition - _transform.position;
+
+            int x = Mathf.Clamp(Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter), 0, gridSize.x - 1);
+            int y = Mathf.Clamp(Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter), 0, gridSize.y - 1);
+
+            return (x, y);
         }
 
-        private bool IsCellWalkable(Vector3 cellPosition)
-        {
-            return !Physics.SphereCast(cellPosition + Vector3.up * _maxDistance, _cellSize, Vector3.down, out RaycastHit raycastHit, _maxDistance, _notWalkableMask);
-        }
-        
         #region Unity Methods
 
-        private void OnValidate()
+        public void Initialize()
         {
             _cellSize = Mathf.Max(0.05f, _cellSize);
             _cellDiameter = _cellSize * 2;
-        }
-
-        private void Awake()
-        {
+            
             CreateGrid();
-            ServiceLocator.Instance.RegisterService<INavigationGraph>(this);
         }
 
-        private void OnDestroy()
+        public void Destroy()
         {
-            if (_grid.IsCreated) 
-                _grid.Dispose();
-        }
-
-        private void OnDrawGizmos()
-        {
-            if (!_showGizmos) return;
-
-            DrawCubeForGrid();
-
-            if (!_showLines && !_showCells) return;
-
-            for (int i = 0; i < GetGridSize(); i++)
-            {
-                int x = i % _gridSize.x;
-                int y = i / _gridSize.x;
-
-                Vector3 cellPosition = GetCellPosition(x, y);
-                
-                DrawLinesForCells(cellPosition);
-                DrawCells(cellPosition);
-            }
-        }
-
-        private void DrawCubeForGrid()
-        {
-            if (!_showBox) return;
-            
-            var gridPosition = transform.position + Vector3.right * _gridSize.x / 2 + Vector3.forward * _gridSize.y / 2;
-            
-            var boxSize = new Vector3(_gridSize.x, 1, _gridSize.y);
-            Gizmos.color = Color.black;
-            Gizmos.DrawWireCube(gridPosition, boxSize);
-        }
-
-        private void DrawLinesForCells(Vector3 cellPosition)
-        {
-            if (!_showLines) return;
-            
-            Gizmos.color = Color.white;
-            Gizmos.DrawLine(cellPosition + Vector3.up * _maxDistance, cellPosition);
-        }
-
-        private void DrawCells(Vector3 cellPosition)
-        {
-            if (!_showCells) return;
-            
-            Vector3 cellSize = new Vector3(.5f, 0, .5f) * _cellDiameter;
-            bool isWalkable = IsCellWalkable(cellPosition);
-            
-            Gizmos.color = isWalkable ? Color.green : Color.red;
-            Gizmos.DrawWireCube(cellPosition, cellSize);
+            if (grid.IsCreated) grid.Dispose();
         }
 
         #endregion

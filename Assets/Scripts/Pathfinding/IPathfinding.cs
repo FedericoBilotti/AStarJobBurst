@@ -1,3 +1,4 @@
+using Agents;
 using NavigationGraph;
 
 namespace Pathfinding

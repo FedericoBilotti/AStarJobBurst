@@ -1,3 +1,4 @@
+using Agents;
 using NavigationGraph;
 using UnityEngine;
 
@@ -7,11 +8,11 @@ public class Player : MonoBehaviour
     private Transform _transform;
     [SerializeField] private Transform _followTarget;
     
-    private AgentNavigation _agentNavigation;
+    private IAgent _agentNavigation;
 
     private void Awake()
     {
-        _agentNavigation = GetComponent<AgentNavigation>();
+        _agentNavigation = GetComponent<IAgent>();
         _transform = transform;
     }
 
@@ -24,7 +25,7 @@ public class Player : MonoBehaviour
         
         // var gridSystem = ServiceLocator.Instance.GetService<INavigationGraph>();
         //var target = GetRandomTarget(gridSystem);
-            
+
         _agentNavigation.RequestPath(myPos, target);
     }
 

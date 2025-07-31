@@ -9,12 +9,12 @@ namespace NavigationGraph
         public Vector3 position;
 
         public int gridIndex;
-        public int x;
-        public int y;
+        public int gridX;
+        public int gridZ;
         public bool isWalkable;
 
-        public bool Equals(Cell other) => x == other.x && y == other.y;
-        public override int GetHashCode() => (int)math.hash(new int3(x, y, gridIndex));
+        public bool Equals(Cell other) => gridX == other.gridX && gridZ == other.gridZ;
+        public override int GetHashCode() => (int)math.hash(new int3(gridX, gridZ, gridIndex));
     }
 
     public struct PathCellData : IHeapComparable<PathCellData>
@@ -24,11 +24,11 @@ namespace NavigationGraph
         public int gCost;
         public int hCost;
         public int FCost => gCost + hCost;
-        
-        public int HeapIndex {get; set; }
-        
+
+        public int HeapIndex { get; set; }
+
         public int CompareTo(PathCellData other)
-        {  
+        {
             int result = FCost.CompareTo(other.FCost);
             if (result == 0) result = hCost.CompareTo(other.hCost);
             return result;

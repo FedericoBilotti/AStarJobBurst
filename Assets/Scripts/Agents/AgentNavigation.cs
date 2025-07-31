@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using NavigationGraph;
 using Pathfinding;
 using Unity.Collections;
 using UnityEngine;
 
-namespace NavigationGraph
+namespace Agents
 {
     public class AgentNavigation : MonoBehaviour, IAgent
     {
@@ -12,7 +13,8 @@ namespace NavigationGraph
         [SerializeField] private float _rotationSpeed = 10;
         [SerializeField] private float _changeWaypointDistance = 0.5f;
 
-        [Header("Debug")] [SerializeField] private bool _showPath;
+        [Header("Debug")] 
+        [SerializeField] private bool _showPath;
 
         private IPathfinding _pathfinding;
         private INavigationGraph _graph;
@@ -30,10 +32,11 @@ namespace NavigationGraph
         public float RotationSpeed { get => _rotationSpeed; set => _rotationSpeed = Mathf.Max(0.01f, value); }
         public float ChangeWaypointDistance { get => _changeWaypointDistance; set => _changeWaypointDistance = Mathf.Max(0.1f, value); }
 
-        private void Start()
+        private void Awake()
         {
             _waypointsPath = new List<Vector3>(10);
             _transform = transform;
+            
             _pathfinding = ServiceLocator.Instance.GetService<IPathfinding>();
             _graph = ServiceLocator.Instance.GetService<INavigationGraph>();
         }

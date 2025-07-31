@@ -1,3 +1,4 @@
+using Agents;
 using NavigationGraph;
 using Pathfinding.RequesterStrategy;
 using UnityEngine;
@@ -15,7 +16,7 @@ namespace Pathfinding
             ServiceLocator.Instance.RegisterService<IPathfinding>(this);
 
             // Should be injected
-            var navigationGraph = GetComponent<INavigationGraph>();
+            var navigationGraph = ServiceLocator.Instance.GetService<INavigationGraph>();
             _aStar = new AStarRequester(navigationGraph);
             _thetaStar = new ThetaStarRequester(navigationGraph);
         }

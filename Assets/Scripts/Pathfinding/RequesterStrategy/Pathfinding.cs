@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Agents;
 using NavigationGraph;
 using Unity.Collections;
 using Unity.Jobs;
