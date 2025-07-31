@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Pathfinding;
 using Unity.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace NavigationGraph
 {
@@ -24,7 +23,6 @@ namespace NavigationGraph
         private int _currentWaypoint;
 
         private Vector3 _lastTargetPosition = new(0, 0, 0);
-        private bool _isMoving; 
 
         public PathStatus StatusPath { get; private set; } = PathStatus.Idle;
         public bool HasPath => _waypointsPath != null && _waypointsPath.Count > 0 && StatusPath == PathStatus.Success;
@@ -62,7 +60,6 @@ namespace NavigationGraph
                 yield return null;
             }
 
-            _isMoving = false;
             ClearPath();
             StatusPath = PathStatus.Idle;
         }
@@ -75,10 +72,10 @@ namespace NavigationGraph
                 StatusPath = PathStatus.Failed;
                 return false;
             }
-            
+
             Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
             if (_lastTargetPosition == endCell.position) return false;
-            
+
             StatusPath = PathStatus.Requested;
 
             Cell startCell = _graph.GetCellWithWorldPosition(startPosition);
@@ -86,7 +83,6 @@ namespace NavigationGraph
 
             if (isPathValid)
             {
-                _isMoving = true;
                 _lastTargetPosition = endCell.position;
                 return true;
             }
@@ -131,7 +127,7 @@ namespace NavigationGraph
         {
             if (distance.sqrMagnitude > _changeWaypointDistance * _changeWaypointDistance) return;
             _currentWaypoint++;
-            
+
             if (_currentWaypoint < _waypointsPath.Count) return;
 
             ClearPath();
