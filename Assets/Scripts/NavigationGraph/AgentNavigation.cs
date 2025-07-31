@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Pathfinding;
 using Unity.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace NavigationGraph
 {
@@ -22,6 +21,8 @@ namespace NavigationGraph
         private Coroutine _moveAgentCoroutine;
 
         private int _currentWaypoint;
+
+        private Vector3 _lastTargetPosition = new(0, 0, 0);
 
         public PathStatus StatusPath { get; private set; } = PathStatus.Idle;
         public bool HasPath => _waypointsPath != null && _waypointsPath.Count > 0 && StatusPath == PathStatus.Success;
@@ -44,17 +45,18 @@ namespace NavigationGraph
             _changeWaypointDistance = Mathf.Max(0.1f, _changeWaypointDistance);
         }
 
-        private void Update() => MapToGrid();
+        // private void Update() => MapToGrid();
 
         // The best option to move the agent is an AgentManager, and move then with jobs & burst, for performance. Because, in the future it will be added flocking.
         private IEnumerator MoveAgent()
         {
-            while (_currentWaypoint < _waypointsPath.Count - 1)
+            while (_currentWaypoint < _waypointsPath.Count)
             {
-                Vector3 distance = _waypointsPath[_currentWaypoint] - _transform.position;
-                Move(distance);
-                Rotate(distance);
-                CheckWaypoints(distance);
+                Vector3 distanceToTarget = _waypointsPath[_currentWaypoint] - _transform.position;
+
+                Move(distanceToTarget);
+                Rotate(distanceToTarget);
+                CheckWaypoints(distanceToTarget);
                 yield return null;
             }
 
@@ -71,14 +73,19 @@ namespace NavigationGraph
                 return false;
             }
 
+            Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
+            if (_lastTargetPosition == endCell.position) return false;
+
             StatusPath = PathStatus.Requested;
-            ClearPath();
 
             Cell startCell = _graph.GetCellWithWorldPosition(startPosition);
-            Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
             bool isPathValid = _pathfinding.RequestPath(this, startCell, endCell);
 
-            if (isPathValid) return true;
+            if (isPathValid)
+            {
+                _lastTargetPosition = endCell.position;
+                return true;
+            }
 
             StatusPath = PathStatus.Failed;
             return false;
@@ -91,6 +98,9 @@ namespace NavigationGraph
                 StatusPath = PathStatus.Failed;
                 return;
             }
+
+            _waypointsPath.Clear();
+            _currentWaypoint = 0;
 
             foreach (var cell in path)
             {
@@ -116,7 +126,9 @@ namespace NavigationGraph
         private void CheckWaypoints(Vector3 distance)
         {
             if (distance.sqrMagnitude > _changeWaypointDistance * _changeWaypointDistance) return;
-            if (++_currentWaypoint < _waypointsPath.Count) return;
+            _currentWaypoint++;
+
+            if (_currentWaypoint < _waypointsPath.Count) return;
 
             ClearPath();
             StatusPath = PathStatus.Idle;

@@ -3,22 +3,21 @@ using System.Collections.Generic;
 using NavigationGraph;
 using Unity.Collections;
 using Unity.Jobs;
-using UnityEngine;
 using UnityEngine.Pool;
 using Utilities;
 
 namespace Pathfinding.RequesterStrategy
 {
-    public class SchedulePathRequest : IPathRequest, IDisposable
+    public abstract class Pathfinding : IPathRequest, IDisposable
     {
-        private readonly INavigationGraph _navigationGraph;
+        protected readonly INavigationGraph navigationGraph;
 
-        private List<PathRequest> _requests;
-        private IObjectPool<PathRequest> _pathRequestPool;
+        protected List<PathRequest> requests;
+        protected IObjectPool<PathRequest> pathRequestPool;
 
-        public SchedulePathRequest(INavigationGraph navigationGraph)
+        protected Pathfinding(INavigationGraph navigationGraph)
         {
-            _navigationGraph = navigationGraph;
+            this.navigationGraph = navigationGraph;
             InitializeRequesters();
         }
 
@@ -26,16 +25,18 @@ namespace Pathfinding.RequesterStrategy
         {
             const int CAPACITY = 100;
             const int MAX_SIZE = 1000;
-            _requests = new List<PathRequest>(CAPACITY);
-            _pathRequestPool = new ObjectPool<PathRequest>(createFunc: () => new PathRequest
+            requests = new List<PathRequest>(CAPACITY);
+            pathRequestPool = new ObjectPool<PathRequest>(createFunc: () => new PathRequest
             {
                 path = new NativeList<Cell>(30, Allocator.Persistent),
+                simplified = new NativeList<Cell>(30, Allocator.Persistent),
                 closedList = new NativeHashSet<int>(64, Allocator.Persistent),
-                openList = new NativePriorityQueue<PathCellData>(_navigationGraph.GetGridSize(), Allocator.Persistent),
+                openList = new NativePriorityQueue<PathCellData>(navigationGraph.GetGridSize(), Allocator.Persistent),
                 visitedNodes = new NativeHashMap<int, PathCellData>(64, Allocator.Persistent)
             }, actionOnGet: pathReq =>
             {
                 pathReq.path.Clear();
+                pathReq.simplified.Clear();
                 pathReq.closedList.Clear();
                 pathReq.openList.Clear();
                 pathReq.visitedNodes.Clear();
@@ -43,63 +44,34 @@ namespace Pathfinding.RequesterStrategy
             }, actionOnRelease: null, actionOnDestroy: pathReq =>
             {
                 if (pathReq.path.IsCreated) pathReq.path.Dispose();
+                if (pathReq.simplified.IsCreated) pathReq.simplified.Dispose();
                 if (pathReq.closedList.IsCreated) pathReq.closedList.Dispose();
                 if (pathReq.openList.IsCreated) pathReq.openList.Dispose();
                 if (pathReq.visitedNodes.IsCreated) pathReq.visitedNodes.Dispose();
             }, defaultCapacity: CAPACITY, maxSize: MAX_SIZE);
         }
-        
-        public bool RequestPath(IAgent agent, Cell start, Cell end)
+
+        public abstract bool RequestPath(IAgent agent, Cell start, Cell end);
+
+        public virtual void FinishPath()
         {
-            if (!end.isWalkable) return false;
-
-            PathRequest pathRequest = _pathRequestPool.Get();
-
-            JobHandle aStarJob = new AStarJob
+            for (int i = requests.Count - 1; i >= 0; i--)
             {
-                grid = _navigationGraph.GetGrid(),
-                closedList = pathRequest.closedList,
-                openList = pathRequest.openList,
-                visitedNodes = pathRequest.visitedNodes,
-                gridSizeX = _navigationGraph.GetGridSizeX(),
-                startIndex = start.gridIndex,
-                endIndex = end.gridIndex
-            }.Schedule();
-            
-            JobHandle postAStarJob = new PostProcessAStarJob
-            {
-                grid = _navigationGraph.GetGrid(),
-                visitedNodes = pathRequest.visitedNodes,
-                endIndex = end.gridIndex,
-                finalPath = pathRequest.path
-            }.Schedule(aStarJob);
-
-            pathRequest.agent = agent;
-            pathRequest.handle = postAStarJob;
-            _requests.Add(pathRequest);
-
-            return true;
-        }
-
-        public void FinishPath()
-        {
-            for (int i = _requests.Count - 1; i >= 0; i--)
-            {
-                var req = _requests[i];
+                PathRequest req = requests[i];
 
                 if (!req.handle.IsCompleted) continue;
 
                 req.handle.Complete();
                 req.agent.SetPath(req.path);
 
-                _pathRequestPool.Release(req);
-                _requests.RemoveAt(i);
+                pathRequestPool.Release(req);
+                requests.RemoveAt(i);
             }
         }
 
         public void Dispose()
         {
-            foreach (var pathRequest in _requests)
+            foreach (var pathRequest in requests)
             {
                 pathRequest.handle.Complete();
                 pathRequest.visitedNodes.Dispose();
@@ -108,17 +80,18 @@ namespace Pathfinding.RequesterStrategy
                 pathRequest.path.Dispose();
             }
 
-            _pathRequestPool.Clear();
+            pathRequestPool.Clear();
         }
 
         public void Clear() => Dispose();
 
-        private class PathRequest
+        protected class PathRequest
         {
             public IAgent agent;
             public JobHandle handle;
 
             public NativeList<Cell> path;
+            public NativeList<Cell> simplified;
             public NativeHashSet<int> closedList;
             public NativePriorityQueue<PathCellData> openList;
             public NativeHashMap<int, PathCellData> visitedNodes;

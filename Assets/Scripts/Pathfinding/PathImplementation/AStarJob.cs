@@ -1,16 +1,17 @@
 using NavigationGraph;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.PathImplementation
 {
-    public struct AStarOldImplementationJob : IJob
+    [BurstCompile]
+    internal struct AStarJob : IJob
     {
         [ReadOnly] public NativeArray<Cell> grid;
 
-        public NativeList<Cell> finalPath;
         public NativeHashSet<int> closedList;
         public NativePriorityQueue<PathCellData> openList;
         public NativeHashMap<int, PathCellData> visitedNodes;
@@ -34,7 +35,6 @@ namespace Pathfinding
 
                 if (currentIndex == endIndex)
                 {
-                    ReversePath(endIndex);
                     return;
                 }
 
@@ -94,8 +94,23 @@ namespace Pathfinding
 
             return 14 * xDistance + 10 * (zDistance - xDistance);
         }
+    }
+
+    [BurstCompile]
+    internal struct AddPath : IJob
+    {
+        [ReadOnly] public NativeArray<Cell> grid;
+        public NativeList<Cell> finalPath;
+        public NativeHashMap<int, PathCellData> visitedNodes;
         
-        private void ReversePath(int lastIndex)
+        [ReadOnly] public int endIndex;
+
+        public void Execute()
+        {
+            AddFinalPath(endIndex);
+        }
+
+        private void AddFinalPath(int lastIndex)
         {
             int currentIndex = lastIndex;
 
@@ -105,28 +120,18 @@ namespace Pathfinding
                 currentIndex = visitedNodes[currentIndex].cameFrom;
             }
             
-            var newPath = new NativeList<Cell>(finalPath.Length, Allocator.TempJob);
-
-            SimplifyPath(newPath);
-            newPath.Reverse();
-            finalPath.Clear();
-            finalPath.AddRange(newPath.AsArray());
-            newPath.Dispose();
+            finalPath.RemoveAt(finalPath.Length - 1);
         }
+    }
 
-        private void SimplifyPath(NativeList<Cell> path)
+    [BurstCompile]
+    internal struct ReversePath : IJob
+    {
+        public NativeList<Cell> finalPath;
+
+        public void Execute()
         {
-            Vector2 lastDir = Vector2.zero;
-            
-            path.Add(finalPath[0]);
-            for (int i = 1; i < finalPath.Length; i++)
-            {
-                Vector2 newDir = new Vector2(finalPath[i - 1].x - finalPath[i].x, finalPath[i - 1].y - finalPath[i].y);
-                if (newDir != lastDir) 
-                    path.Add(finalPath[i]);
-                
-                lastDir = newDir;
-            }
+            finalPath.Reverse();
         }
     }
 }
