@@ -1,5 +1,6 @@
 using System;
 using NavigationGraph;
+using Pathfinding.PathImplementation;
 using Unity.Collections;
 using Unity.Jobs;
 using Utilities;

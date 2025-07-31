@@ -2,11 +2,10 @@ using NavigationGraph;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
-using Unity.Mathematics;
 using UnityEngine;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.PathImplementation
 {
     [BurstCompile]
     internal struct AStarJob : IJob
@@ -100,23 +99,15 @@ namespace Pathfinding
     [BurstCompile]
     internal struct AddPath : IJob
     {
-        [ReadOnly] private NativeArray<Cell> _grid;
-        private NativeList<Cell> _finalPath;
-        private NativeHashMap<int, PathCellData> _visitedNodes;
+        [ReadOnly] public NativeArray<Cell> grid;
+        public NativeList<Cell> finalPath;
+        public NativeHashMap<int, PathCellData> visitedNodes;
         
-        [ReadOnly] private int _endIndex;
-
-        public AddPath(NativeArray<Cell> grid, NativeList<Cell> finalPath, NativeHashMap<int, PathCellData> visitedNodes, int endIndex)
-        {
-            _grid = grid;
-            _finalPath = finalPath;
-            _visitedNodes = visitedNodes;
-            _endIndex = endIndex;
-        }
+        [ReadOnly] public int endIndex;
 
         public void Execute()
         {
-            AddFinalPath(_endIndex);
+            AddFinalPath(endIndex);
         }
 
         private void AddFinalPath(int lastIndex)
@@ -125,11 +116,11 @@ namespace Pathfinding
 
             while (currentIndex != -1)
             {
-                _finalPath.Add(_grid[currentIndex]);
-                currentIndex = _visitedNodes[currentIndex].cameFrom;
+                finalPath.Add(grid[currentIndex]);
+                currentIndex = visitedNodes[currentIndex].cameFrom;
             }
             
-            _finalPath.RemoveAt(_finalPath.Length - 1);
+            finalPath.RemoveAt(finalPath.Length - 1);
         }
     }
 
@@ -141,100 +132,6 @@ namespace Pathfinding
         public void Execute()
         {
             finalPath.Reverse();
-        }
-    }
-
-    [BurstCompile]
-    internal struct ThetaStarJob : IJob
-    {
-        [ReadOnly] private NativeArray<Cell> _grid;
-        [ReadOnly] private readonly int _endIndex;
-        [ReadOnly] private readonly int _gridSizeX;
-
-        private NativeList<Cell> _finalPath;
-        private NativeList<Cell> _simplified;
-
-        public ThetaStarJob(NativeArray<Cell> grid, int gridSizeX, NativeList<Cell> finalPath, NativeList<Cell> simplified) : this()
-        {
-            _grid = grid;
-            _gridSizeX = gridSizeX;
-            _finalPath = finalPath;
-            _simplified = simplified;
-        }
-
-        public void Execute()
-        {
-            SimplifyPath();
-            ReversePath();
-        }
-
-        private void ReversePath()
-        {
-            _finalPath.Clear();
-            _finalPath.AddRange(_simplified.AsArray());
-        }
-
-        private void SimplifyPath()
-        {
-            // Avoid simplifying the path if it has less than 2 cells
-            if (_finalPath.Length <= 2) 
-                return;
-
-            int j = 0;
-            _simplified.Add(_finalPath[0]);
-
-            for (int i = 1; i < _finalPath.Length; i++)
-            {
-                if (HasLineOfSight(_finalPath[j], _finalPath[i])) continue;
-
-                _simplified.Add(_finalPath[i - 1]);
-                j = i - 1;
-            }
-        }
-
-        // Bresenham algorithm
-        private bool HasLineOfSight(Cell startCell, Cell endCell)
-        {
-            int startX = startCell.x;
-            int startY = startCell.y;
-            int endX = endCell.x;
-            int endY = endCell.y;
-
-            int deltaX = Mathf.Abs(endX - startX);
-            int deltaY = Mathf.Abs(endY - startY);
-
-            int stepX = startX < endX ? 1 : -1;
-            int stepY = startY < endY ? 1 : -1;
-
-            int error = deltaX - deltaY;
-
-            while (startX != endX || startY != endY)
-            {
-                int index = GetIndex(startX, startY);
-
-                if (!_grid[index].isWalkable) return false;
-
-                int doubleError = 2 * error;
-
-                if (doubleError > -deltaY)
-                {
-                    error -= deltaY;
-                    startX += stepX;
-                }
-
-                if (doubleError < deltaX)
-                {
-                    error += deltaX;
-                    startY += stepY;
-                }
-            }
-
-            return true;
-        }
-
-        private int GetIndex(int x, int y)
-        {
-            return x + y * _gridSizeX;
         }
     }
 }

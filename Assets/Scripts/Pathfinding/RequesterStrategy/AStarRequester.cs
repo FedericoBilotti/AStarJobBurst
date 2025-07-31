@@ -4,10 +4,10 @@ using Unity.Jobs;
 
 namespace Pathfinding.RequesterStrategy
 {
-    public class ThetaStarRequester : Pathfinding
+    public class AStarRequester : Pathfinding
     {
-        public ThetaStarRequester(INavigationGraph navigationGraph) : base(navigationGraph) { }
-
+        public AStarRequester(INavigationGraph navigationGraph) : base(navigationGraph) { }
+        
         public override bool RequestPath(IAgent agent, Cell start, Cell end)
         {
             if (!end.isWalkable) return false;
@@ -33,18 +33,10 @@ namespace Pathfinding.RequesterStrategy
                 endIndex = end.gridIndex
             }.Schedule(aStarJob);
 
-            JobHandle thetaStarJob = new ThetaStarJob
-            {
-                grid = navigationGraph.GetGrid(),
-                gridSizeX = navigationGraph.GetGridSizeX(),
-                finalPath = pathRequest.path,
-                simplified = pathRequest.simplified
-            }.Schedule(addPath);
-
             JobHandle reversePath = new ReversePath
             {
                 finalPath = pathRequest.path
-            }.Schedule(thetaStarJob);
+            }.Schedule(addPath);
 
             pathRequest.agent = agent;
             pathRequest.handle = reversePath;

@@ -4,7 +4,7 @@ using Unity.Jobs;
 using UnityEngine;
 using Utilities;
 
-namespace Pathfinding
+namespace Pathfinding.PathImplementation
 {
     public struct AStarOldImplementationJob : IJob
     {
