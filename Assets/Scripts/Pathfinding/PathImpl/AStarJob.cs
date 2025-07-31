@@ -98,31 +98,25 @@ namespace Pathfinding
     }
 
     [BurstCompile]
-    internal struct PostProcessAStarJob : IJob
+    internal struct AddPath : IJob
     {
         [ReadOnly] private NativeArray<Cell> _grid;
-        [ReadOnly] private NativeHashMap<int, PathCellData> _visitedNodes;
-        [ReadOnly] private readonly int _endIndex;
-        [ReadOnly] private readonly int _gridSizeX;
-
         private NativeList<Cell> _finalPath;
-        private NativeList<Cell> _simplified;
+        private NativeHashMap<int, PathCellData> _visitedNodes;
+        
+        [ReadOnly] private int _endIndex;
 
-        public PostProcessAStarJob(NativeArray<Cell> grid, NativeHashMap<int, PathCellData> visitedNodes, int endIndex, int gridSizeX, NativeList<Cell> finalPath, NativeList<Cell> simplified) : this()
+        public AddPath(NativeArray<Cell> grid, NativeList<Cell> finalPath, NativeHashMap<int, PathCellData> visitedNodes, int endIndex)
         {
             _grid = grid;
+            _finalPath = finalPath;
             _visitedNodes = visitedNodes;
             _endIndex = endIndex;
-            _gridSizeX = gridSizeX;
-            _finalPath = finalPath;
-            _simplified = simplified;
         }
 
         public void Execute()
         {
             AddFinalPath(_endIndex);
-            SimplifyPath();
-            ReversePath();
         }
 
         private void AddFinalPath(int lastIndex)
@@ -134,13 +128,50 @@ namespace Pathfinding
                 _finalPath.Add(_grid[currentIndex]);
                 currentIndex = _visitedNodes[currentIndex].cameFrom;
             }
+            
+            _finalPath.RemoveAt(_finalPath.Length - 1);
+        }
+    }
+
+    [BurstCompile]
+    internal struct ReversePath : IJob
+    {
+        public NativeList<Cell> finalPath;
+
+        public void Execute()
+        {
+            finalPath.Reverse();
+        }
+    }
+
+    [BurstCompile]
+    internal struct ThetaStarJob : IJob
+    {
+        [ReadOnly] private NativeArray<Cell> _grid;
+        [ReadOnly] private readonly int _endIndex;
+        [ReadOnly] private readonly int _gridSizeX;
+
+        private NativeList<Cell> _finalPath;
+        private NativeList<Cell> _simplified;
+
+        public ThetaStarJob(NativeArray<Cell> grid, int gridSizeX, NativeList<Cell> finalPath, NativeList<Cell> simplified) : this()
+        {
+            _grid = grid;
+            _gridSizeX = gridSizeX;
+            _finalPath = finalPath;
+            _simplified = simplified;
+        }
+
+        public void Execute()
+        {
+            SimplifyPath();
+            ReversePath();
         }
 
         private void ReversePath()
         {
             _finalPath.Clear();
             _finalPath.AddRange(_simplified.AsArray());
-            _finalPath.Reverse();
         }
 
         private void SimplifyPath()

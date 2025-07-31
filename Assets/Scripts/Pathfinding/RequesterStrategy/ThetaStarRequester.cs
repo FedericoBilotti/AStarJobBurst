@@ -3,20 +3,19 @@ using System.Collections.Generic;
 using NavigationGraph;
 using Unity.Collections;
 using Unity.Jobs;
-using UnityEngine;
 using UnityEngine.Pool;
 using Utilities;
 
 namespace Pathfinding.RequesterStrategy
 {
-    public class SchedulePathRequest : IPathRequest, IDisposable
+    public class ThetaStarRequester : IPathRequest, IDisposable
     {
         private readonly INavigationGraph _navigationGraph;
 
         private List<PathRequest> _requests;
         private IObjectPool<PathRequest> _pathRequestPool;
 
-        public SchedulePathRequest(INavigationGraph navigationGraph)
+        public ThetaStarRequester(INavigationGraph navigationGraph)
         {
             _navigationGraph = navigationGraph;
             InitializeRequesters();
@@ -68,18 +67,29 @@ namespace Pathfinding.RequesterStrategy
                 startIndex = start.gridIndex,
                 endIndex = end.gridIndex
             }.Schedule();
-
-            JobHandle postAStarJob = new PostProcessAStarJob(
-                    _navigationGraph.GetGrid(), 
-                    pathRequest.visitedNodes, 
-                    end.gridIndex, 
-                    _navigationGraph.GetGridSizeX(), 
+            
+            JobHandle addPath = new AddPath(
+                    _navigationGraph.GetGrid(),
                     pathRequest.path,
-                    pathRequest.simplified)
+                    pathRequest.visitedNodes,
+                    end.gridIndex)
                     .Schedule(aStarJob);
 
+            JobHandle thetaStarJob = new ThetaStarJob(
+                    _navigationGraph.GetGrid(),
+                    _navigationGraph.GetGridSizeX(),
+                    pathRequest.path,
+                    pathRequest.simplified)
+                    .Schedule(addPath);
+            
+            JobHandle reversePath = new ReversePath
+                    {
+                        finalPath = pathRequest.path
+                    }
+                    .Schedule(thetaStarJob);
+
             pathRequest.agent = agent;
-            pathRequest.handle = postAStarJob;
+            pathRequest.handle = reversePath;
             _requests.Add(pathRequest);
 
             return true;

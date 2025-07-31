@@ -20,7 +20,7 @@ namespace Pathfinding
             var navigationGraph = GetComponent<INavigationGraph>();
             _singlePathRequest = new OnePathRequester(navigationGraph);
             _multiPathRequest = new MultiplePathRequester(navigationGraph);
-            _schedulePathRequest = new SchedulePathRequest(navigationGraph);
+            _schedulePathRequest = new ThetaStarRequester(navigationGraph);
         }
 
         public bool RequestPath(IAgent agent, Cell start, Cell end)
