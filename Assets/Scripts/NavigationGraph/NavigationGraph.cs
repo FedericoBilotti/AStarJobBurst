@@ -6,25 +6,27 @@ namespace NavigationGraph
 {
     public abstract class NavigationGraph : INavigationGraph
     {
-        private readonly LayerMask _notWalkableMask;    
+        private readonly LayerMask _notWalkableMask;
+        private readonly LayerMask _walkableMask;
         private readonly float _maxDistance;
         private float _cellSize;
         private float _cellDiameter;
         protected Vector2Int gridSize;
         protected NativeArray<Cell> grid;
-        
+
         private readonly Transform _transform;
 
         public NavigationGraphSystem.NavigationGraphType GraphType { get; protected set; }
 
-        protected NavigationGraph(float cellSize, float maxDistance, Vector2Int gridSize, LayerMask notWalkableMask, Transform transform)
+        protected NavigationGraph(float cellSize, float maxDistance, Vector2Int gridSize, LayerMask notWalkableMask, Transform transform, LayerMask walkableMask)
         {
             _cellSize = cellSize;
             this.gridSize = gridSize;
-            
+
             _maxDistance = maxDistance;
+            _walkableMask = walkableMask;
             _notWalkableMask = notWalkableMask;
-            
+
             _transform = transform;
         }
 
@@ -92,14 +94,40 @@ namespace NavigationGraph
 
         protected bool IsCellWalkable(Vector3 cellPosition)
         {
-            return !Physics.SphereCast(cellPosition + Vector3.up * _maxDistance, _cellSize, Vector3.down, out _, _maxDistance, _notWalkableMask);
+            Vector3 origin = cellPosition + Vector3.up * _maxDistance;
+            
+            bool hitObstacles = Physics.SphereCast(origin, _cellSize, Vector3.down, out _, _maxDistance, _notWalkableMask);
+
+            if (hitObstacles) return false;
+            
+            // This is for check the air, so if it touches walkable area, it's okay, but if it doesn't, it's not walkable because it's the air.
+            bool hitWalkableArea = Physics.SphereCast(origin, _cellSize, Vector3.down, out _, _maxDistance, _walkableMask.value);
+
+            return hitWalkableArea;
         }
 
-        protected Vector3 GetCellPosition(int gridX, int gridY)
+
+        protected Vector3 GetCellPositionInWorldMap(int gridX, int gridY)
         {
-            return _transform.position + Vector3.right * (gridX * _cellDiameter + _cellSize) + Vector3.forward * (gridY * _cellDiameter + _cellSize);
+            Vector3 cellPosition = GetCellPositionInGrid(gridX, gridY);
+
+            return CheckPoint(cellPosition);
         }
 
+        private Vector3 GetCellPositionInGrid(int gridX, int gridY)
+        {
+            return _transform.position
+                   + Vector3.right * (gridX * _cellDiameter + _cellSize) 
+                   + Vector3.forward * (gridY * _cellDiameter + _cellSize);
+        }
+
+        private Vector3 CheckPoint(Vector3 cellPosition)
+        {
+            return Physics.Raycast(cellPosition + Vector3.up * _maxDistance, 
+                    Vector3.down, out RaycastHit raycastHit, _maxDistance, _walkableMask)
+                    ? raycastHit.point
+                    : cellPosition;
+        }
         private (int x, int y) GetCellsMap(Vector3 worldPosition)
         {
             Vector3 gridPos = worldPosition - _transform.position;
@@ -116,7 +144,7 @@ namespace NavigationGraph
         {
             _cellSize = Mathf.Max(0.05f, _cellSize);
             _cellDiameter = _cellSize * 2;
-            
+
             CreateGrid();
         }
 

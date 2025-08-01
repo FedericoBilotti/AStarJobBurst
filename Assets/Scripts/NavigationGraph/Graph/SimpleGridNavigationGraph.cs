@@ -6,7 +6,9 @@ namespace NavigationGraph.Graph
 {
     public sealed class SimpleGridNavigationGraph : NavigationGraph
     {
-        public SimpleGridNavigationGraph(float cellSize, float maxDistance, Vector2Int gridSize, LayerMask notWalkableMask, Transform transform) : base(cellSize, maxDistance, gridSize, notWalkableMask, transform)
+        public SimpleGridNavigationGraph(float cellSize, float maxDistance, Vector2Int gridSize, 
+                LayerMask notWalkableMask, Transform transform, LayerMask walkableMask) : base(cellSize, maxDistance, gridSize, 
+                notWalkableMask, transform, walkableMask)
         {
             GraphType = NavigationGraphSystem.NavigationGraphType.Grid2D;
         }
@@ -25,8 +27,7 @@ namespace NavigationGraph.Graph
                 int x = i % gridSize.x;
                 int y = i / gridSize.x;
 
-                Vector3 cellPosition = GetCellPosition(x, y);
-
+                Vector3 cellPosition = GetCellPositionInWorldMap(x, y);
                 bool isWalkable = IsCellWalkable(cellPosition);
 
                 grid[i] = new Cell

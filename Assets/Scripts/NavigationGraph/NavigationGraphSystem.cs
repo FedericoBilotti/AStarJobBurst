@@ -1,4 +1,6 @@
+using System.Linq;
 using NavigationGraph.Graph;
+using UnityEditor;
 using UnityEngine;
 
 namespace NavigationGraph
@@ -14,6 +16,7 @@ namespace NavigationGraph
         [Header("Check Wall")] 
         [SerializeField] private float _maxDistance = 15;
         [SerializeField] private LayerMask _notWalkableMask;
+        [SerializeField] private LayerMask _walkableMask;
 
         [Header("Graph Type")] [SerializeField] private NavigationGraphType _graphType;
 
@@ -22,8 +25,8 @@ namespace NavigationGraph
         private void Awake()
         {
             _graph = _graphType == NavigationGraphType.Grid2D
-                    ? new SimpleGridNavigationGraph(_cellSize, _maxDistance, _gridSize, _notWalkableMask, transform)
-                    : new WorldNavigationGraph(_cellSize, _maxDistance, _gridSize, _notWalkableMask, transform);
+                    ? new SimpleGridNavigationGraph(_cellSize, _maxDistance, _gridSize, _notWalkableMask, transform, _walkableMask)
+                    : new WorldNavigationGraph(_cellSize, _maxDistance, _gridSize, _notWalkableMask, transform, _walkableMask);
             _graph?.Initialize();
             
             ServiceLocator.Instance.RegisterService<INavigationGraph>(_graph);
@@ -48,10 +51,10 @@ namespace NavigationGraph
                 int x = i % _gridSize.x;
                 int y = i / _gridSize.x;
 
-                Vector3 cellPosition = GetCellPosition(x, y);
+                Vector3 cellPosition = GetCellPositionInWorldMap(x, y);
 
-                DrawLinesForCells(cellPosition);
                 DrawCells(cellPosition);
+                DrawLinesForCells(cellPosition);
             }
         }
 
@@ -69,15 +72,7 @@ namespace NavigationGraph
         private void DrawLinesForCells(Vector3 cellPosition)
         {
             if (!_showLines) return;
-
-            Gizmos.color = Color.white;
-
-            if (CheckPoint(cellPosition, out RaycastHit raycastHit))
-            {
-                Gizmos.DrawLine(cellPosition + Vector3.up * _maxDistance, raycastHit.point);
-                return;
-            }
-
+            
             Gizmos.DrawLine(cellPosition + Vector3.up * _maxDistance, cellPosition);
         }
 
@@ -89,31 +84,46 @@ namespace NavigationGraph
             bool isWalkable = IsCellWalkable(cellPosition);
 
             Gizmos.color = isWalkable ? Color.green : Color.red;
-
-            if (CheckPoint(cellPosition, out RaycastHit raycastHit))
-            {
-                Gizmos.DrawWireCube(raycastHit.point, sizeCell);
-                return;
-            }
-
+            
             Gizmos.DrawWireCube(cellPosition, sizeCell);
         }
 
-        private Vector3 GetCellPosition(int gridX, int gridY)
+        private Vector3 GetCellPositionInWorldMap(int gridX, int gridY)
         {
-            return transform.position + Vector3.right * (gridX * GetCellDiameter() + _cellSize) + Vector3.forward * (gridY * GetCellDiameter() + _cellSize);
+            Vector3 cellPosition = GetCellPositionInGrid(gridX, gridY);
+
+            return CheckPoint(cellPosition);
         }
 
-        private bool CheckPoint(Vector3 cellPosition, out RaycastHit raycastHit)
+        private Vector3 GetCellPositionInGrid(int gridX, int gridY)
         {
-            return Physics.Raycast(cellPosition + Vector3.up * _maxDistance, Vector3.down, out raycastHit, _maxDistance);
+            return transform.position
+                   + Vector3.right * (gridX * GetCellDiameter() + _cellSize) 
+                   + Vector3.forward * (gridY * GetCellDiameter() + _cellSize);
+        }
+
+        private Vector3 CheckPoint(Vector3 cellPosition)
+        {
+            return Physics.Raycast(cellPosition + Vector3.up * _maxDistance, 
+                    Vector3.down, out RaycastHit raycastHit, _maxDistance, _walkableMask)
+                    ? raycastHit.point
+                    : cellPosition;
         }
 
         private bool IsCellWalkable(Vector3 cellPosition)
         {
-            return !Physics.SphereCast(cellPosition + Vector3.up * _maxDistance, _cellSize, Vector3.down, out _, _maxDistance, _notWalkableMask);
+            Vector3 origin = cellPosition + Vector3.up * _maxDistance;
+            
+            bool hitObstacles = Physics.SphereCast(origin, _cellSize, Vector3.down, out _, _maxDistance, _notWalkableMask.value);
+
+            if (hitObstacles) return false;
+            
+            // This is for check the air, so if it touches walkable area, it's okay, but if it doesn't, it's not walkable because it's the air.
+            bool hitWalkableArea = Physics.SphereCast(origin, _cellSize, Vector3.down, out _, _maxDistance, _walkableMask.value);
+
+            return hitWalkableArea;
         }
-        
+
         private float GetCellDiameter() => _cellSize * 2;
 
         #endregion
