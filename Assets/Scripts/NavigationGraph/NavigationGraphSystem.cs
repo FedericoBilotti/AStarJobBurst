@@ -7,18 +7,22 @@ namespace NavigationGraph
 {
     public sealed class NavigationGraphSystem : MonoBehaviour
     {
+        [Header("Gizmos")]
         [SerializeField] private bool _showBox;
         [SerializeField] private bool _showRaycasts;
         [SerializeField] private bool _showCells;
+        [SerializeField] private Vector2 _cellSizeGizmos;
+
+        [Header("Graph")] 
+        [SerializeField] private NavigationGraphType _graphType;
         [SerializeField] private float _cellSize = 0.5f;
         [SerializeField] private Vector2Int _gridSize = new(100, 100);
-
+        
         [Header("Check Wall")] 
         [SerializeField] private float _maxDistance = 15;
         [SerializeField] private LayerMask _notWalkableMask;
         [SerializeField] private LayerMask _walkableMask;
 
-        [Header("Graph Type")] [SerializeField] private NavigationGraphType _graphType;
 
         private NavigationGraph _graph;
 
@@ -30,6 +34,12 @@ namespace NavigationGraph
             _graph?.Initialize();
             
             ServiceLocator.Instance.RegisterService<INavigationGraph>(_graph);
+        }
+
+        private void OnValidate()
+        {
+            _cellSizeGizmos.x = Mathf.Min(1f, _cellSizeGizmos.x);
+            _cellSizeGizmos.y = Mathf.Min(1f, _cellSizeGizmos.y);
         }
         
         private void OnDestroy() => _graph?.Destroy();
@@ -62,11 +72,19 @@ namespace NavigationGraph
         {
             if (!_showBox) return;
 
-            Vector3 gridPosition = transform.position + Vector3.right * _gridSize.x / 2 + Vector3.forward * _gridSize.y / 2 + Vector3.up * _maxDistance / 2;
-            Vector3 boxSize = new Vector3(_gridSize.x, _maxDistance, _gridSize.y);
-            
+            float width  = _gridSize.x * GetCellDiameter();
+            float depth  = _gridSize.y * GetCellDiameter();
+            float height = _maxDistance;
+
+            Vector3 gridCenter = transform.position
+                                 + Vector3.right   * (width  * 0.5f)
+                                 + Vector3.forward * (depth  * 0.5f)
+                                 + Vector3.up      * (height * 0.5f);
+
+            Vector3 boxSize = new Vector3(width, height, depth);
+
             Gizmos.color = Color.black;
-            Gizmos.DrawWireCube(gridPosition, boxSize);
+            Gizmos.DrawWireCube(gridCenter, boxSize);
         }
 
         private void DrawLinesForCells(Vector3 cellPosition)
@@ -81,12 +99,12 @@ namespace NavigationGraph
         {
             if (!_showCells) return;
 
-            Vector3 sizeCell = new Vector3(.5f, 0, .5f) * GetCellDiameter();
+            Vector3 sizeCell = new Vector3(_cellSizeGizmos.x, 0.05f, _cellSizeGizmos.y) * GetCellDiameter();
+            Vector3 cellPositionForGizmos = cellPosition + Vector3.up * 0.1f;
             bool isWalkable = IsCellWalkable(cellPosition);
-
-            Gizmos.color = isWalkable ? Color.green : Color.red;
             
-            Gizmos.DrawWireCube(cellPosition, sizeCell);
+            Gizmos.color = isWalkable ? Color.green : Color.red;
+            Gizmos.DrawWireCube(cellPositionForGizmos, sizeCell);
         }
 
         private Vector3 GetCellPositionInWorldMap(int gridX, int gridY)
@@ -99,8 +117,8 @@ namespace NavigationGraph
         private Vector3 GetCellPositionInGrid(int gridX, int gridY)
         {
             return transform.position
-                   + Vector3.right * (gridX * GetCellDiameter() + _cellSize) 
-                   + Vector3.forward * (gridY * GetCellDiameter() + _cellSize);
+                   + Vector3.right   * ((gridX + 0.5f) * GetCellDiameter())
+                   + Vector3.forward * ((gridY + 0.5f) * GetCellDiameter());
         }
 
         private Vector3 CheckPoint(Vector3 cellPosition)
@@ -120,7 +138,7 @@ namespace NavigationGraph
             if (hitObstacles) return false;
             
             // This is for check the air, so if it touches walkable area, it's okay, but if it doesn't, it's not walkable because it's the air.
-            bool hitWalkableArea = Physics.SphereCast(origin, _cellSize, Vector3.down, out _, _maxDistance, _walkableMask.value);
+            bool hitWalkableArea = Physics.SphereCast(origin, 0.1f, Vector3.down, out _, _maxDistance, _walkableMask.value);
 
             return hitWalkableArea;
         }

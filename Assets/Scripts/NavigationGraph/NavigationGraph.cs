@@ -114,11 +114,13 @@ namespace NavigationGraph
             return CheckPoint(cellPosition);
         }
 
+        
+
         private Vector3 GetCellPositionInGrid(int gridX, int gridY)
         {
             return _transform.position
-                   + Vector3.right * (gridX * _cellDiameter + _cellSize) 
-                   + Vector3.forward * (gridY * _cellDiameter + _cellSize);
+                   + Vector3.right   * ((gridX + 0.5f) * _cellDiameter)
+                   + Vector3.forward * ((gridY + 0.5f) * _cellDiameter);
         }
 
         private Vector3 CheckPoint(Vector3 cellPosition)
