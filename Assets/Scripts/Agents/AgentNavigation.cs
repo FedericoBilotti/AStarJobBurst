@@ -70,11 +70,12 @@ namespace Agents
         public bool RequestPath(Vector3 startPosition, Vector3 endPosition)
         {
             if (StatusPath == PathStatus.Requested) return false;
-            if (!IsAgentInGrid(_graph, _transform.position))
-            {
-                StatusPath = PathStatus.Failed;
-                return false;
-            }
+            
+            // if (!IsAgentInGrid(_graph, _transform.position))
+            // {
+            //     StatusPath = PathStatus.Failed;
+            //     return false;
+            // }
 
             Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
             if (_lastTargetPosition == endCell.position) return false;

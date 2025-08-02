@@ -7,11 +7,12 @@ namespace NavigationGraph
     public struct Cell : IEquatable<Cell>
     {
         public Vector3 position;
+        public bool isWalkable;
 
         public int gridIndex;
         public int gridX;
         public int gridZ;
-        public bool isWalkable;
+        public float height;
 
         public bool Equals(Cell other) => gridX == other.gridX && gridZ == other.gridZ;
         public override int GetHashCode() => (int)math.hash(new int3(gridX, gridZ, gridIndex));

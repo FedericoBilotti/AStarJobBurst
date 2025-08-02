@@ -4,30 +4,30 @@ using UnityEngine;
 
 namespace NavigationGraph
 {
-    public abstract class NavigationGraph : INavigationGraph
+    internal abstract class NavigationGraph : INavigationGraph
     {
-        private readonly LayerMask _notWalkableMask;
-        private readonly LayerMask _walkableMask;
-        private readonly float _maxDistance;
-        private float _cellSize;
-        private float _cellDiameter;
+        protected readonly LayerMask notWalkableMask;
+        protected readonly LayerMask walkableMask;
+        protected readonly float maxDistance;
+        protected float cellSize;
+        protected  float cellDiameter;
         protected Vector2Int gridSize;
         protected NativeArray<Cell> grid;
 
-        private readonly Transform _transform;
+        protected readonly Transform transform;
 
         public NavigationGraphSystem.NavigationGraphType GraphType { get; protected set; }
 
         protected NavigationGraph(float cellSize, float maxDistance, Vector2Int gridSize, LayerMask notWalkableMask, Transform transform, LayerMask walkableMask)
         {
-            _cellSize = cellSize;
+            this.cellSize = cellSize;
             this.gridSize = gridSize;
 
-            _maxDistance = maxDistance;
-            _walkableMask = walkableMask;
-            _notWalkableMask = notWalkableMask;
+            this.maxDistance = maxDistance;
+            this.walkableMask = walkableMask;
+            this.notWalkableMask = notWalkableMask;
 
-            _transform = transform;
+            this.transform = transform;
         }
 
         protected abstract void CreateGrid();
@@ -46,10 +46,10 @@ namespace NavigationGraph
 
         public virtual bool IsInGrid(Vector3 worldPosition)
         {
-            Vector3 gridPos = worldPosition - _transform.position;
+            Vector3 gridPos = worldPosition - transform.position;
 
-            int x = Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter);
-            int y = Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter);
+            int x = Mathf.FloorToInt((gridPos.x - cellSize) / cellDiameter);
+            int y = Mathf.FloorToInt((gridPos.z - cellSize) / cellDiameter);
 
             if (x < 0 || x >= gridSize.x || y < 0 || y >= gridSize.y) return false;
 
@@ -80,7 +80,7 @@ namespace NavigationGraph
 
                 if (grid[index].isWalkable)
                 {
-                    return _transform.position + new Vector3(x * _cellDiameter + _cellSize, 0f, y * _cellDiameter + _cellSize);
+                    return transform.position + new Vector3(x * cellDiameter + cellSize, 0f, y * cellDiameter + cellSize);
                 }
 
                 queue.Enqueue(new Vector2Int(x + 1, y));
@@ -89,23 +89,22 @@ namespace NavigationGraph
                 queue.Enqueue(new Vector2Int(x, y - 1));
             }
 
-            return _transform.position;
+            return transform.position;
         }
 
         protected bool IsCellWalkable(Vector3 cellPosition)
         {
-            Vector3 origin = cellPosition + Vector3.up * _maxDistance;
+            Vector3 origin = cellPosition + Vector3.up * maxDistance;
             
-            bool hitObstacles = Physics.SphereCast(origin, _cellSize, Vector3.down, out _, _maxDistance, _notWalkableMask);
+            bool hitObstacles = Physics.SphereCast(origin, cellSize, Vector3.down, out _, maxDistance, notWalkableMask);
 
             if (hitObstacles) return false;
             
             // This is for check the air, so if it touches walkable area, it's okay, but if it doesn't, it's not walkable because it's the air.
-            bool hitWalkableArea = Physics.SphereCast(origin, _cellSize, Vector3.down, out _, _maxDistance, _walkableMask.value);
+            bool hitWalkableArea = Physics.SphereCast(origin, cellSize, Vector3.down, out _, maxDistance, walkableMask.value);
 
             return hitWalkableArea;
         }
-
 
         protected Vector3 GetCellPositionInWorldMap(int gridX, int gridY)
         {
@@ -114,38 +113,37 @@ namespace NavigationGraph
             return CheckPoint(cellPosition);
         }
 
-        
-
         private Vector3 GetCellPositionInGrid(int gridX, int gridY)
         {
-            return _transform.position
-                   + Vector3.right   * ((gridX + 0.5f) * _cellDiameter)
-                   + Vector3.forward * ((gridY + 0.5f) * _cellDiameter);
+            return transform.position
+                   + Vector3.right   * ((gridX + 0.5f) * cellDiameter)
+                   + Vector3.forward * ((gridY + 0.5f) * cellDiameter);
         }
 
         private Vector3 CheckPoint(Vector3 cellPosition)
         {
-            return Physics.Raycast(cellPosition + Vector3.up * _maxDistance, 
-                    Vector3.down, out RaycastHit raycastHit, _maxDistance, _walkableMask)
+            return Physics.Raycast(cellPosition + Vector3.up * maxDistance, 
+                    Vector3.down, out RaycastHit raycastHit, maxDistance, walkableMask)
                     ? raycastHit.point
                     : cellPosition;
         }
-        private (int x, int y) GetCellsMap(Vector3 worldPosition)
+        
+        protected (int x, int y) GetCellsMap(Vector3 worldPosition)
         {
-            Vector3 gridPos = worldPosition - _transform.position;
+            Vector3 gridPos = worldPosition - transform.position;
 
-            int x = Mathf.Clamp(Mathf.FloorToInt((gridPos.x - _cellSize) / _cellDiameter), 0, gridSize.x - 1);
-            int y = Mathf.Clamp(Mathf.FloorToInt((gridPos.z - _cellSize) / _cellDiameter), 0, gridSize.y - 1);
+            int x = Mathf.Clamp(Mathf.FloorToInt((gridPos.x - cellSize) / cellDiameter), 0, gridSize.x - 1);
+            int y = Mathf.Clamp(Mathf.FloorToInt((gridPos.z - cellSize) / cellDiameter), 0, gridSize.y - 1);
 
             return (x, y);
         }
 
         #region Unity Methods
 
-        public void Initialize()
+        public virtual void Initialize()
         {
-            _cellSize = Mathf.Max(0.05f, _cellSize);
-            _cellDiameter = _cellSize * 2;
+            cellSize = Mathf.Max(0.05f, cellSize);
+            cellDiameter = cellSize * 2;
 
             CreateGrid();
         }

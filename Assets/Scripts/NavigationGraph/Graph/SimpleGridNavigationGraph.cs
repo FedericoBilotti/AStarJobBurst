@@ -4,7 +4,7 @@ using Vector3 = UnityEngine.Vector3;
 
 namespace NavigationGraph.Graph
 {
-    public sealed class SimpleGridNavigationGraph : NavigationGraph
+    internal sealed class SimpleGridNavigationGraph : NavigationGraph
     {
         public SimpleGridNavigationGraph(float cellSize, float maxDistance, Vector2Int gridSize, 
                 LayerMask notWalkableMask, Transform transform, LayerMask walkableMask) : base(cellSize, maxDistance, gridSize, 
