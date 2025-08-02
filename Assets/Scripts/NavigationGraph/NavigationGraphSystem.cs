@@ -8,7 +8,7 @@ namespace NavigationGraph
     public sealed class NavigationGraphSystem : MonoBehaviour
     {
         [SerializeField] private bool _showBox;
-        [SerializeField] private bool _showLines;
+        [SerializeField] private bool _showRaycasts;
         [SerializeField] private bool _showCells;
         [SerializeField] private float _cellSize = 0.5f;
         [SerializeField] private Vector2Int _gridSize = new(100, 100);
@@ -62,17 +62,18 @@ namespace NavigationGraph
         {
             if (!_showBox) return;
 
-            var gridPosition = transform.position + Vector3.right * _gridSize.x / 2 + Vector3.forward * _gridSize.y / 2;
-
-            var boxSize = new Vector3(_gridSize.x, 1, _gridSize.y);
+            Vector3 gridPosition = transform.position + Vector3.right * _gridSize.x / 2 + Vector3.forward * _gridSize.y / 2 + Vector3.up * _maxDistance / 2;
+            Vector3 boxSize = new Vector3(_gridSize.x, _maxDistance, _gridSize.y);
+            
             Gizmos.color = Color.black;
             Gizmos.DrawWireCube(gridPosition, boxSize);
         }
 
         private void DrawLinesForCells(Vector3 cellPosition)
         {
-            if (!_showLines) return;
-            
+            if (!_showRaycasts) return;
+
+            Gizmos.color = Color.green;
             Gizmos.DrawLine(cellPosition + Vector3.up * _maxDistance, cellPosition);
         }
 
