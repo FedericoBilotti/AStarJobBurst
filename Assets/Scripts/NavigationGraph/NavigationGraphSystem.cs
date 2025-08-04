@@ -63,11 +63,15 @@ namespace NavigationGraph
             {
                 Vector3[] positions = GetCellPositionInWorldMap(x, y);
 
-                // Dibujo las líneas de techo a suelo
-                foreach (var pos in positions) DrawLineForCell(pos, boxBottomY, boxTopY);
+                if (_showPreviewOfCells)
+                    DrawCells(positions, boxBottomY, boxTopY);
 
-                // Dibujo las celdas (cubo) en la altura real, pero siempre dentro del rango
-                DrawCells(positions, boxBottomY, boxTopY);
+                if (!_showRaycasts) continue;
+                
+                foreach (var pos in positions)
+                {
+                    DrawLineForCell(pos, boxBottomY, boxTopY);
+                }
             }
         }
 
@@ -89,8 +93,6 @@ namespace NavigationGraph
 
         private void DrawLineForCell(Vector3 cellPosition, float bottomY, float topY)
         {
-            if (!_showRaycasts) return;
-
             Vector3 topPoint = new Vector3(cellPosition.x, topY, cellPosition.z);
             Vector3 bottomPoint = new Vector3(cellPosition.x, bottomY, cellPosition.z);
 
@@ -100,8 +102,6 @@ namespace NavigationGraph
 
         private void DrawCells(Vector3[] cellPositions, float bottomY, float topY)
         {
-            if (!_showPreviewOfCells) return;
-
             Vector3 sizeCell = new Vector3(_cellSizeGizmos.x, 0.05f, _cellSizeGizmos.y) * GetCellDiameter();
 
             foreach (var pos in cellPositions)
@@ -132,6 +132,7 @@ namespace NavigationGraph
             LayerMask combined = _walkableMask | _notWalkableMask;
             return RaycastContinuous(from, combined).Select(h => h.point).ToArray();
 
+            // 2d grid: 
             // return Physics.Raycast(cellPosition + Vector3.up * _maxDistance, 
             //         Vector3.down, out RaycastHit raycastHit, _maxDistance, _walkableMask)
             //         ? raycastHit.point

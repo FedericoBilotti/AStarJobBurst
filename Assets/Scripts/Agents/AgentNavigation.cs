@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using NavigationGraph;
 using Pathfinding;
 using Unity.Collections;
+using Unity.Mathematics;
 using UnityEngine;
+using static Unity.Mathematics.math;
 
 namespace Agents
 {
@@ -24,7 +26,7 @@ namespace Agents
 
         private int _currentWaypoint;
 
-        private Vector3 _lastTargetPosition = new(0, 0, 0);
+        private float3 _lastTargetPosition = new(0, 0, 0);
 
         public PathStatus StatusPath { get; private set; } = PathStatus.Idle;
         public bool HasPath => _waypointsPath != null && _waypointsPath.Count > 0 && StatusPath == PathStatus.Success;
@@ -70,15 +72,15 @@ namespace Agents
         public bool RequestPath(Vector3 startPosition, Vector3 endPosition)
         {
             if (StatusPath == PathStatus.Requested) return false;
-            
-            // if (!IsAgentInGrid(_graph, _transform.position))
-            // {
-            //     StatusPath = PathStatus.Failed;
-            //     return false;
-            // }
+            if (!IsAgentInGrid(_graph, _transform.position))
+            {
+                StatusPath = PathStatus.Failed;
+                return false;
+            }
 
-            Cell endCell = _graph.GetCellWithWorldPosition(endPosition);
-            if (_lastTargetPosition == endCell.position) return false;
+            float3 target = endPosition;
+            Cell endCell = _graph.GetCellWithWorldPosition(target); 
+            if (all(_lastTargetPosition == endCell.position)) return false;
 
             StatusPath = PathStatus.Requested;
 

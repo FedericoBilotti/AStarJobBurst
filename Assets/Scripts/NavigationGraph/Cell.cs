@@ -6,7 +6,7 @@ namespace NavigationGraph
 {
     public struct Cell : IEquatable<Cell>
     {
-        public Vector3 position;
+        public float3 position;
         public bool isWalkable;
 
         public int gridIndex;
