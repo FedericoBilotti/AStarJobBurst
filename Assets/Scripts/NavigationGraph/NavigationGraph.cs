@@ -57,7 +57,7 @@ namespace NavigationGraph
             return grid[gridIndex].isWalkable;
         }
 
-        public Vector3 GetNearestCellPosition(Vector3 worldPosition)
+        public Vector3 GetNearestWalkableCellPosition(Vector3 worldPosition)
         {
             var (startX, startY) = GetCellsMap(worldPosition);
 
@@ -92,16 +92,14 @@ namespace NavigationGraph
             return transform.position;
         }
 
-        protected bool IsCellWalkable(Vector3 cellPosition)
+        protected bool IsCellWalkable(Vector3 cellPosition, float radius)
         {
-            Vector3 origin = cellPosition + Vector3.up * maxDistance;
+            Vector3 origin = cellPosition + Vector3.up * 0.1f;
             
-            bool hitObstacles = Physics.SphereCast(origin, cellSize, Vector3.down, out _, maxDistance, notWalkableMask);
-
+            bool hitObstacles = Physics.CheckSphere(origin, radius, notWalkableMask.value);
             if (hitObstacles) return false;
-            
-            // This is for check the air, so if it touches walkable area, it's okay, but if it doesn't, it's not walkable because it's the air.
-            bool hitWalkableArea = Physics.SphereCast(origin, cellSize, Vector3.down, out _, maxDistance, walkableMask.value);
+
+            bool hitWalkableArea = Physics.CheckSphere(origin, radius, walkableMask.value);
 
             return hitWalkableArea;
         }

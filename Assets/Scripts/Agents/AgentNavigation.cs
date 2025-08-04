@@ -157,7 +157,7 @@ namespace Agents
 
         private static Vector3 MapToNearestCellPosition(INavigationGraph graph, Vector3 agentPosition)
         {
-            Vector3 nearestPosition = graph.GetNearestCellPosition(agentPosition);
+            Vector3 nearestPosition = graph.GetNearestWalkableCellPosition(agentPosition);
             return nearestPosition;
         }
 

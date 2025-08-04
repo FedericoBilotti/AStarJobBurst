@@ -28,7 +28,7 @@ namespace NavigationGraph.Graph
                 int y = i / gridSize.x;
 
                 Vector3 cellPosition = GetCellPositionInWorldMap(x, y);
-                bool isWalkable = IsCellWalkable(cellPosition);
+                bool isWalkable = IsCellWalkable(cellPosition, 1);
 
                 grid[i] = new Cell
                 {

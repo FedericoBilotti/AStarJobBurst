@@ -36,7 +36,7 @@ namespace NavigationGraph.Graph
 
                     foreach (var hit in hits)
                     {
-                        bool isWalkable = IsCellWalkable(hit.point);
+                        bool isWalkable = IsCellWalkable(hit.point, 2f);
                         if (!isWalkable) continue;
 
                         var cell = new Cell
@@ -44,7 +44,7 @@ namespace NavigationGraph.Graph
                             position = hit.point,
                             gridX = x,
                             gridZ = z,
-                            height = hit.point.y,
+                            height = hit.point.y, // TODO: Change this.
                             gridIndex = tempCells.Count,
                             isWalkable = isWalkable
                         };
@@ -82,6 +82,7 @@ namespace NavigationGraph.Graph
             }
             return hits;
         }
+        
         
         public Cell GetClosestCell(Vector3 worldPos)
         {
