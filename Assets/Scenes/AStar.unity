@@ -13915,8 +13915,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _showBox: 1
-  _showRaycasts: 0
+  _showScanDistance: 0
   _showPreviewOfCells: 1
+  _showPreviewOfWalkableCells: 1
   _cellSizeGizmos: {x: 0.25, y: 0.25}
   _graphType: 0
   _gridSize: {x: 71, y: 30}
@@ -13929,6 +13930,9 @@ MonoBehaviour:
   _walkableMask:
     serializedVersion: 2
     m_Bits: 128
+  _agentMask:
+    serializedVersion: 2
+    m_Bits: 1
 --- !u!1 &784245669
 GameObject:
   m_ObjectHideFlags: 0

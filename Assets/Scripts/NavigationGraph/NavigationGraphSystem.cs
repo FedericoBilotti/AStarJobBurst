@@ -7,12 +7,15 @@ namespace NavigationGraph
 {
     public sealed class NavigationGraphSystem : MonoBehaviour
     {
-        [Header("Gizmos")] [SerializeField] private bool _showBox;
-        [SerializeField] private bool _showRaycasts;
+        [Header("Gizmos")] 
+        [SerializeField] private bool _showBox;
+        [SerializeField] private bool _showScanDistance;
         [SerializeField] private bool _showPreviewOfCells;
+        [SerializeField] private bool _showPreviewOfWalkableCells;
         [SerializeField] private Vector2 _cellSizeGizmos;
 
-        [Header("Graph")] [SerializeField] private NavigationGraphType _graphType;
+        [Header("Graph")] 
+        [SerializeField] private NavigationGraphType _graphType;
         [SerializeField] private Vector2Int _gridSize = new(100, 100);
         [SerializeField] private float _maxDistance = 15;
         [SerializeField] private float _cellSize = 0.5f;
@@ -21,7 +24,7 @@ namespace NavigationGraph
         [SerializeField] private int _maxHits = 10;
         [SerializeField] private LayerMask _notWalkableMask;
         [SerializeField] private LayerMask _walkableMask;
-
+        [SerializeField] private LayerMask _agentMask;
 
         private NavigationGraph _graph;
 
@@ -70,7 +73,7 @@ namespace NavigationGraph
                 if (_showPreviewOfCells)
                     DrawCells(positions, boxBottomY, boxTopY);
 
-                if (!_showRaycasts) continue;
+                if (!_showScanDistance) continue;
                 
                 DrawLineForCell(positions[0], boxBottomY, boxTopY);
             }
@@ -167,10 +170,21 @@ namespace NavigationGraph
         private bool IsCellWalkable(Vector3 cellPosition, float radius)
         {
             Vector3 origin = cellPosition + Vector3.up * 0.1f;
-            
-            bool hitObstacles = Physics.CheckSphere(origin, radius, _notWalkableMask.value);
+
+            if (_showPreviewOfWalkableCells)
+            {
+                Gizmos.color = Color.black;
+                Gizmos.DrawWireSphere(origin, radius);
+            }
+
+            var hitObstacles = Physics.CheckSphere(origin, radius, _notWalkableMask.value);
             if (hitObstacles) return false;
 
+            // Check if it's something up.
+            var ray = new Ray(origin + Vector3.up * 0.1f, Vector3.up);
+            bool hitHeight = Physics.SphereCast(ray, 0.5f, 1.5f, ~_agentMask.value);
+            if (hitHeight) return false;
+            
             // This is for check the air, so if it touches walkable area, it's okay, but if it doesn't, it's not walkable because it's the air.
             bool hitWalkableArea = Physics.CheckSphere(origin, radius, _walkableMask.value);
 
