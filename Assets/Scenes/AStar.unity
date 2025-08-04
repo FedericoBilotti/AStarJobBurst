@@ -13883,7 +13883,7 @@ Transform:
   m_GameObject: {fileID: 781907326}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -101.5, y: -2.8, z: -40}
+  m_LocalPosition: {x: -100.8, y: -2.8, z: -29.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -13914,11 +13914,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dc1fbc0e8cc4b0bba31c143803972f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _showBox: 1
-  _showScanDistance: 0
-  _showPreviewOfCells: 1
-  _showPreviewOfWalkableCells: 1
-  _cellSizeGizmos: {x: 0.25, y: 0.25}
+  _boxGrid: 1
+  _scanDistance: 0
+  _previewOfCells: 1
+  _debugOfWalkableCells: 0
+  _cellSizeGizmos: {x: 0.5, y: 0.5}
   _graphType: 0
   _gridSize: {x: 71, y: 30}
   _maxDistance: 25

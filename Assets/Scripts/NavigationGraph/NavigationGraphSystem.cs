@@ -8,10 +8,10 @@ namespace NavigationGraph
     public sealed class NavigationGraphSystem : MonoBehaviour
     {
         [Header("Gizmos")] 
-        [SerializeField] private bool _showBox;
-        [SerializeField] private bool _showScanDistance;
-        [SerializeField] private bool _showPreviewOfCells;
-        [SerializeField] private bool _showPreviewOfWalkableCells;
+        [SerializeField] private bool _boxGrid;
+        [SerializeField] private bool _scanDistance;
+        [SerializeField] private bool _previewOfCells;
+        [SerializeField] private bool _debugOfWalkableCells;
         [SerializeField] private Vector2 _cellSizeGizmos;
 
         [Header("Graph")] 
@@ -40,8 +40,10 @@ namespace NavigationGraph
 
         private void OnValidate()
         {
-            _cellSizeGizmos.x = Mathf.Min(1f, _cellSizeGizmos.x);
-            _cellSizeGizmos.y = Mathf.Min(1f, _cellSizeGizmos.y);
+            _cellSizeGizmos.x = Mathf.Max(0.01f, _cellSizeGizmos.x);
+            _cellSizeGizmos.x = Mathf.Min(0.95f, _cellSizeGizmos.x);
+            _cellSizeGizmos.y = Mathf.Max(0.01f, _cellSizeGizmos.y);
+            _cellSizeGizmos.y = Mathf.Min(0.95f, _cellSizeGizmos.y);
         }
 
         private void OnDestroy() => _graph?.Destroy();
@@ -70,10 +72,10 @@ namespace NavigationGraph
 
                 if (positions.Length == 0) continue;
 
-                if (_showPreviewOfCells)
+                if (_previewOfCells)
                     DrawCells(positions, boxBottomY, boxTopY);
 
-                if (!_showScanDistance) continue;
+                if (!_scanDistance) continue;
                 
                 DrawLineForCell(positions[0], boxBottomY, boxTopY);
             }
@@ -81,7 +83,7 @@ namespace NavigationGraph
 
         private void DrawCubeForGrid()
         {
-            if (!_showBox) return;
+            if (!_boxGrid) return;
 
             float width = _gridSize.x * GetCellDiameter();
             float depth = _gridSize.y * GetCellDiameter();
@@ -171,7 +173,7 @@ namespace NavigationGraph
         {
             Vector3 origin = cellPosition + Vector3.up * 0.1f;
 
-            if (_showPreviewOfWalkableCells)
+            if (_debugOfWalkableCells)
             {
                 Gizmos.color = Color.black;
                 Gizmos.DrawWireSphere(origin, radius);
